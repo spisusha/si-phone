@@ -12,19 +12,30 @@ interface CatalogState {
   load: () => Promise<void>;
 }
 
+let inflight: Promise<void> | null = null;
+
 export const useCatalogStore = create<CatalogState>()((set, get) => ({
   families: [],
   variants: [],
-  loading: false,
+  // true с самого начала: пока каталог не пришёл, экраны показывают загрузку,
+  // а не мигают «Модель не найдена» / «Товары не найдены».
+  loading: true,
   loaded: false,
   sort: 'popularity',
 
   setSort: (sort) => set({ sort }),
 
-  load: async () => {
-    if (get().loaded || get().loading) return;
-    set({ loading: true });
-    const [families, variants] = await Promise.all([fetchFamilies(), fetchVariants()]);
-    set({ families, variants, loading: false, loaded: true });
+  load: () => {
+    if (get().loaded) return Promise.resolve();
+    if (!inflight) {
+      inflight = Promise.all([fetchFamilies(), fetchVariants()])
+        .then(([families, variants]) => set({ families, variants, loading: false, loaded: true }))
+        .catch((err) => {
+          console.error('catalog load failed', err);
+          set({ loading: false });
+        })
+        .finally(() => { inflight = null; });
+    }
+    return inflight;
   },
 }));

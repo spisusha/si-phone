@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { OrderPayload } from '../domain/types';
+import { cartItemSubtitle } from '../domain/variantFormat';
 import './OrderResultScreen.css';
 
 interface LocationState {
@@ -96,9 +97,9 @@ export default function OrderResultScreen() {
         {payload.items.map((item, i) => (
           <div key={i} className="result-item">
             <span className="result-item__name">{item.titleSnapshot}</span>
-            <span className="result-item__opts">
-              {Object.values(item.optionsSnapshot).filter(Boolean).join(' · ')}
-            </span>
+            {cartItemSubtitle(item) && (
+              <span className="result-item__opts">{cartItemSubtitle(item)}</span>
+            )}
             <span className="result-item__price">
               {item.qty} × {item.priceSnapshot.toLocaleString('ru-RU')} ₽
             </span>

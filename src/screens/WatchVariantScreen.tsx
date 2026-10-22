@@ -96,7 +96,7 @@ export default function SkuVariantScreen() {
 
       <div className="detail-gallery">
         <img
-          src={images[imgIdx] || '/placeholder.png'}
+          src={images[imgIdx] || '/placeholder.svg'}
           alt={title}
         />
         {images.length > 1 && (

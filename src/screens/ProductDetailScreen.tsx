@@ -71,7 +71,7 @@ export default function ProductDetailScreen() {
       </button>
 
       <div className="detail-gallery">
-        <img src={displayImages[imgIdx] || '/placeholder.png'} alt={family.title} />
+        <img src={displayImages[imgIdx] || '/placeholder.svg'} alt={family.title} />
         {displayImages.length > 1 && (
           <div className="detail-dots">
             {displayImages.map((_, i) => (

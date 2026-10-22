@@ -32,10 +32,8 @@ export default function FamilyProductsScreen() {
     }
   }, [loading, family, redirect, navigate]);
 
-  if (loading) return <Loader />;
-  if (!family) return <div className="page"><p>Модель не найдена</p></div>;
-  if (redirect) return <Loader />;
-
+  // Все хуки — до ранних return: иначе при прямом открытии ссылки
+  // (сначала loading, потом данные) React падает с ошибкой #310.
   const deduped = useMemo(() => {
     const seen = new Map<string, Variant>();
     for (const v of familyVariants) {
@@ -61,7 +59,7 @@ export default function FamilyProductsScreen() {
     return [...seen.values()];
   }, [familyVariants]);
 
-  const isMacBook = family.category === 'MacBook';
+  const isMacBook = family?.category === 'MacBook';
 
   const [chipFilter, setChipFilter] = useState<string | null>(null);
 
@@ -82,6 +80,10 @@ export default function FamilyProductsScreen() {
       return raw.split(' ')[0] === chipFilter;
     });
   }, [deduped, isMacBook, chipFilter]);
+
+  if (loading) return <Loader />;
+  if (!family) return <div className="page"><p>Модель не найдена</p></div>;
+  if (redirect) return <Loader />;
 
   const sorted = [...filtered].sort((a, b) => {
     if (a.in_stock !== b.in_stock) return a.in_stock ? -1 : 1;

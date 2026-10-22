@@ -67,6 +67,7 @@
 .cart-item__info {
   flex: 1;
   min-width: 0;
+  padding-right: 24px; /* место под крестик удаления */
 }
 
 .cart-item__title {

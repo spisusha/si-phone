@@ -3,11 +3,8 @@ import type { Category, ProductFamily, Variant } from '../domain/types';
 import { getMinPrice, hasStock } from '../domain/catalogLogic';
 import { formatWatchDisplay } from '../domain/watchFormat';
 import { getFirstImage } from '../domain/imageUtils';
+import { formatStorage } from '../domain/variantFormat';
 import './ProductCard.css';
-
-function formatStorage(gb: number): string {
-  return gb >= 1024 ? `${gb / 1024} ТБ` : `${gb} ГБ`;
-}
 
 function buildSkuSubtitle(v: Variant, category: Category): string {
   const opts = v.options || {};

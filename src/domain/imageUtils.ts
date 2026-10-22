@@ -40,5 +40,5 @@ export function getFirstImage(
   variant: Variant | null | undefined,
   family: ProductFamily | null | undefined,
 ): string {
-  return getDisplayImages(variant, family)[0] || '/placeholder.png';
+  return getDisplayImages(variant, family)[0] || '/placeholder.svg';
 }

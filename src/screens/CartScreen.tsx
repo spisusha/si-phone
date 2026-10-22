@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
+import { cartItemSubtitle } from '../domain/variantFormat';
 import './CartScreen.css';
 
 export default function CartScreen() {
@@ -34,12 +35,9 @@ export default function CartScreen() {
             </div>
             <div className="cart-item__info">
               <h3 className="cart-item__title">{item.titleSnapshot}</h3>
-              <p className="cart-item__opts">
-                {Object.entries(item.optionsSnapshot)
-                  .filter(([, v]) => v)
-                  .map(([, v]) => v)
-                  .join(' · ')}
-              </p>
+              {cartItemSubtitle(item) && (
+                <p className="cart-item__opts">{cartItemSubtitle(item)}</p>
+              )}
               <span className="cart-item__price">
                 {item.priceSnapshot.toLocaleString('ru-RU')} ₽
               </span>

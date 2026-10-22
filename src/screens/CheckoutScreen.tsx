@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api/orderRepo';
+import { cartItemSubtitle } from '../domain/variantFormat';
 import { getTgUser, getGuestId } from '../telegram/telegramWebApp';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
 import './CheckoutScreen.css';
@@ -18,16 +19,15 @@ export default function CheckoutScreen() {
   const [error, setError] = useState('');
 
   if (items.length === 0) {
-    const saved = sessionStorage.getItem('lastOrder');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        navigate('/result', { state: parsed, replace: true });
-        return null;
-      } catch { /* ignore */ }
-    }
-    navigate('/cart', { replace: true });
-    return null;
+    // Корзина пуста: после оформления — на экран заказа, иначе — в корзину.
+    // <Navigate> вместо navigate() прямо в рендере.
+    let lastOrder: unknown = null;
+    try {
+      lastOrder = JSON.parse(sessionStorage.getItem('lastOrder') ?? 'null');
+    } catch { /* ignore */ }
+    return lastOrder
+      ? <Navigate to="/result" state={lastOrder} replace />
+      : <Navigate to="/cart" replace />;
   }
 
   const handleSubmit = async () => {
@@ -72,12 +72,12 @@ export default function CheckoutScreen() {
         <h3>Ваш заказ</h3>
         {items.map((item) => (
           <div key={item.variantId} className="checkout-item">
-            {item.image && <img className="checkout-item__img" src={item.image} alt="" />}
+            <img className="checkout-item__img" src={item.image || '/placeholder.svg'} alt="" />
             <div className="checkout-item__info">
               <span className="checkout-item__name">{item.titleSnapshot}</span>
-              <span className="checkout-item__opts">
-                {Object.values(item.optionsSnapshot).filter(Boolean).join(' · ')}
-              </span>
+              {cartItemSubtitle(item) && (
+                <span className="checkout-item__opts">{cartItemSubtitle(item)}</span>
+              )}
               <span className="checkout-item__price">
                 {item.qty > 1 ? `${item.qty} × ` : ''}
                 {item.priceSnapshot.toLocaleString('ru-RU')} ₽
