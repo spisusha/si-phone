@@ -159,12 +159,6 @@
   font-weight: 600;
 }
 
-.profile-theme__hint {
-  font-size: var(--fs-cap);
-  color: var(--color-muted);
-  margin-top: 6px;
-  padding-left: 4px;
-}
 
 .profile-version {
   text-align: center;

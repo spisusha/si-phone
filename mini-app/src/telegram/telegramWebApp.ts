@@ -49,6 +49,7 @@ interface TelegramWebApp {
   setBackgroundColor?: (color: string) => void;
   setBottomBarColor?: (color: string) => void;
   openTelegramLink?: (url: string) => void;
+  openLink?: (url: string) => void;
   enableClosingConfirmation?: () => void;
   disableClosingConfirmation?: () => void;
   disableVerticalSwipes?: () => void;
@@ -199,6 +200,17 @@ export function haptic(kind: HapticKind): void {
   if (kind === 'select') hf.selectionChanged();
   else if (kind === 'add') hf.impactOccurred('light');
   else hf.notificationOccurred(kind);
+}
+
+/* ── Звонок: внутри Telegram ссылка tel: не срабатывает (на iPhone «ничего не происходит»),
+   а openLink открывает только http(s). Поэтому открываем свою страницу /call.html в браузере
+   Telegram — она вызывает системное окно «Позвонить?». Вне Telegram работает обычная tel:. ── */
+export function callPhone(tel: string): boolean {
+  const wa = getWebApp();
+  if (!isTelegramEnv() || !wa?.openLink) return false;
+  const digits = tel.replace(/[^\d+]/g, '');
+  wa.openLink(`${window.location.origin}/call.html?to=${encodeURIComponent(digits)}`);
+  return true;
 }
 
 /* ── Ссылка на чат в Telegram: внутри Telegram открывается поверх, магазин не закрывается ── */

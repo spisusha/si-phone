@@ -139,6 +139,7 @@ Deno.serve(withCors(async (req) => {
     const phone = String(body.phone ?? '').trim();
     if (!deliveryMethod || !paymentMethod) return json({ ok: false, error: 'Выберите способ получения и оплаты' }, 400);
     if (deliveryMethod === 'delivery' && address.length < 5) return json({ ok: false, error: 'Укажите адрес доставки' }, 400);
+    if (deliveryMethod === 'delivery' && paymentMethod === 'cash') return json({ ok: false, error: 'При доставке оплата только переводом' }, 400);
     if (phone && !PHONE_RE.test(phone)) return json({ ok: false, error: 'Проверьте номер телефона' }, 400);
 
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);

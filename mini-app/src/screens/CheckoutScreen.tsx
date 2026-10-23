@@ -15,6 +15,9 @@ export default function CheckoutScreen() {
 
   const [delivery, setDelivery] = useState<DeliveryMethod>('pickup');
   const [payment, setPayment] = useState<PaymentMethod>('cash');
+  // Доставка — только переводом: чтобы не было «привезли, а наличными передумал платить» (Роман, 23.10.2026).
+  const cashAllowed = delivery === 'pickup';
+  const paymentMethod: PaymentMethod = cashAllowed ? payment : 'online';
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +38,7 @@ export default function CheckoutScreen() {
       deliveryMethod: delivery,
       address: delivery === 'delivery' ? address.trim() : undefined,
       phone: phone.trim() || undefined,
-      paymentMethod: payment,
+      paymentMethod,
     });
     setSubmitting(false);
 
@@ -53,7 +56,7 @@ export default function CheckoutScreen() {
       deliveryMethod: delivery,
       address: delivery === 'delivery' ? address.trim() : undefined,
       phone: phone.trim() || undefined,
-      paymentMethod: payment,
+      paymentMethod,
       tgUser: getTgUser(),
       createdAt: new Date().toISOString(),
     };
@@ -140,8 +143,14 @@ export default function CheckoutScreen() {
 
       <p className="tg-section-title">Оплата</p>
       <div className="tg-group" role="radiogroup" aria-label="Способ оплаты">
-        <OptionRow title="Наличными" sub="При получении" checked={payment === 'cash'} onSelect={() => setPayment('cash')} />
-        <OptionRow title="Переводом" sub="Реквизиты пришлёт менеджер" checked={payment === 'online'} onSelect={() => setPayment('online')} />
+        <OptionRow
+          title="Наличными"
+          sub={cashAllowed ? 'При получении' : 'Только при самовывозе'}
+          checked={paymentMethod === 'cash'}
+          disabled={!cashAllowed}
+          onSelect={() => setPayment('cash')}
+        />
+        <OptionRow title="Переводом" sub="Реквизиты пришлёт менеджер" checked={paymentMethod === 'online'} onSelect={() => setPayment('online')} />
       </div>
 
       <p className="tg-section-title">Связь</p>
@@ -187,10 +196,11 @@ export default function CheckoutScreen() {
 }
 
 // Строка-вариант «как в настройках Telegram»: название, пояснение и галочка справа.
-function OptionRow({ title, sub, checked, onSelect }: {
+function OptionRow({ title, sub, checked, disabled, onSelect }: {
   title: string;
   sub: string;
   checked: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -198,8 +208,13 @@ function OptionRow({ title, sub, checked, onSelect }: {
       type="button"
       role="radio"
       aria-checked={checked}
-      className="tg-row tg-row--option"
-      onClick={() => { if (!checked) haptic('select'); onSelect(); }}
+      aria-disabled={disabled || undefined}
+      className={`tg-row tg-row--option${disabled ? ' is-disabled' : ''}`}
+      onClick={() => {
+        if (disabled) { haptic('warning'); return; }
+        if (!checked) haptic('select');
+        onSelect();
+      }}
     >
       <span className="tg-row__main">
         <span className="tg-row__title">{title}</span>

@@ -99,6 +99,15 @@
   background: var(--color-bg);
 }
 
+/* Недоступный вариант (например, «Наличными» при доставке) */
+.tg-row--option.is-disabled .tg-row__title {
+  color: var(--color-muted);
+}
+
+.tg-row--option.is-disabled:active {
+  background: transparent;
+}
+
 .tg-check {
   color: var(--color-accent);
   opacity: 0;

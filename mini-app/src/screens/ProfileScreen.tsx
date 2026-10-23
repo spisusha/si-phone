@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { getTgUser } from '../telegram/telegramWebApp';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
 import { IconPhone, IconPin, IconTelegram } from '../components/icons';
-import { openTelegramChat } from '../telegram/telegramWebApp';
+import { callPhone, openTelegramChat } from '../telegram/telegramWebApp';
 import './ProfileScreen.css';
 
 // Контакты магазина
-const TG_CONTACTS = ['andr3i23', 'l_bobr_l'];
+const TG_CONTACTS = ['l_bobr_l', 'andr3i23']; // первым — главный менеджер (Артём)
 const PHONES = [
   { tel: '+79164050444', label: '+7 916 405-04-44' },
   { tel: '+79252010234', label: '+7 925 201-02-34' },
@@ -69,7 +69,7 @@ export default function ProfileScreen() {
           </button>
         ))}
         {PHONES.map((p) => (
-          <a key={p.tel} className="tg-row" href={`tel:${p.tel}`}>
+          <a key={p.tel} className="tg-row" href={`tel:${p.tel}`} onClick={(e) => { if (callPhone(p.tel)) e.preventDefault(); }}>
             <IconPhone size={20} className="tg-row__icon" />
             <span className="tg-row__main tg-row__title">Позвонить</span>
             <span className="tg-row__value profile-contact-value">{p.label}</span>
@@ -97,10 +97,9 @@ export default function ProfileScreen() {
             </button>
           ))}
         </div>
-        <p className="profile-theme__hint">«Авто» — как в Telegram</p>
       </div>
 
-      <p className="profile-version">Версия 1.0.0</p>
+      <p className="profile-version">Версия {__APP_VERSION__}</p>
     </div>
   );
 }
