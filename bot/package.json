@@ -1,0 +1,17 @@
+{
+  "name": "si-phone-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Telegram-бот магазина Si Phone: кнопка мини-аппа, FAQ, отзывы, ответы Gemini",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261023.1",
+    "typescript": "^5.3.3",
+    "wrangler": "^4.152.0"
+  }
+}

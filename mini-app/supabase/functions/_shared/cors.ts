@@ -1,7 +1,7 @@
 // CORS — только для браузеров и НЕ является защитой (curl шлёт что угодно).
 // Настоящая защита — проверки внутри функций (токен админа, initData Telegram).
 // Разрешённые адреса задаются секретом ALLOWED_ORIGINS через запятую.
-const DEFAULT_ORIGINS = 'https://mini-app-andrew.vercel.app,http://localhost:5173';
+const DEFAULT_ORIGINS = 'https://si-phone.vercel.app,http://localhost:5173';
 
 function allowedOrigins(): string[] {
   return (Deno.env.get('ALLOWED_ORIGINS') || DEFAULT_ORIGINS)

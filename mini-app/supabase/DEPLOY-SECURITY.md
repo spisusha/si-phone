@@ -16,7 +16,7 @@ npx supabase secrets list              # должны быть TELEGRAM_BOT_TOKE
 ```
 npx supabase secrets set ADMIN_PASSWORD=<случайный пароль от 20 символов>   # меньше 16 или одни цифры — вход не откроется
 # сгенерировать: node -e "console.log(require('crypto').randomBytes(18).toString('base64url'))"
-npx supabase secrets set ALLOWED_ORIGINS=https://mini-app-andrew.vercel.app
+npx supabase secrets set ALLOWED_ORIGINS=https://si-phone.vercel.app
 ```
 Сменить `ADMIN_TOKEN_SECRET` (новая случайная строка) — так старые токены админки перестанут работать.
 

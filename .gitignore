@@ -1,30 +1,20 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
+# Si Phone — общий репозиторий: mini-app/ (магазин) и bot/ (Telegram-бот)
 
-node_modules
-dist
-dist-ssr
-*.local
+# Зависимости и сборки
+node_modules/
+dist/
+.wrangler/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# Supabase temp
-supabase/.temp/
-
-# Environment
+# Секреты и локальные настройки — никогда в git
 .env
+.env.*
+!.env.example
+*.local
+.dev.vars
+
+# Служебное
+*.log
+.DS_Store
+.ruff_cache/
+.claude/*
+!.claude/launch.json
