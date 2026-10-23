@@ -70,3 +70,9 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+.product-card__price--ask {
+  font-size: var(--fs-foot);
+  font-weight: 500;
+  color: var(--color-muted);
+}

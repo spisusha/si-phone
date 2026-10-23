@@ -1,41 +1,55 @@
-.home-ticker {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  overflow: hidden;
-  background: var(--color-primary-light);
-  backdrop-filter: blur(8px);
-  padding: 8px 0;
-  margin: 0 -16px 14px;
+.home-header {
+  margin-bottom: 14px;
 }
 
-.home-ticker__track {
-  display: flex;
-  width: max-content;
-  animation: ticker 10s linear infinite;
+.home-header .page-title {
+  margin-bottom: 2px;
 }
 
-.home-ticker__track span {
-  flex-shrink: 0;
-  padding: 0 48px;
-  font-size: 12.5px;
-  color: var(--color-text);
-  white-space: nowrap;
-}
-
-.home-ticker__icon {
-  display: inline-block;
-  vertical-align: -2px;
-  color: var(--color-accent);
-}
-
-@keyframes ticker {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
+.home-header__sub {
+  font-size: var(--fs-foot);
+  color: var(--color-muted);
 }
 
 .product-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+}
+
+/* Подсказка про товары не на витрине */
+.home-hint {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+}
+
+.home-hint__icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.home-hint__title {
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.home-hint__text {
+  font-size: var(--fs-foot);
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.home-hint__link {
+  margin-top: 8px;
+  min-height: 32px;
+  font-size: var(--fs-foot);
+  font-weight: 600;
+  color: var(--color-accent);
 }

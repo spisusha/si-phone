@@ -1,8 +1,12 @@
+/* Одна строка, листается пальцем; края во всю ширину экрана, чтобы было видно «есть ещё» */
 .cat-filter {
   display: flex;
-  flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  overflow-x: auto;
+  margin: 0 -16px 10px;
+  padding: 0 16px 2px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .cat-chip {

@@ -48,6 +48,7 @@ interface TelegramWebApp {
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
   setBottomBarColor?: (color: string) => void;
+  openTelegramLink?: (url: string) => void;
   enableClosingConfirmation?: () => void;
   disableClosingConfirmation?: () => void;
   disableVerticalSwipes?: () => void;
@@ -198,4 +199,12 @@ export function haptic(kind: HapticKind): void {
   if (kind === 'select') hf.selectionChanged();
   else if (kind === 'add') hf.impactOccurred('light');
   else hf.notificationOccurred(kind);
+}
+
+/* ── Ссылка на чат в Telegram: внутри Telegram открывается поверх, магазин не закрывается ── */
+
+export function openTelegramChat(url: string): void {
+  const wa = getWebApp();
+  if (supports('6.1') && wa?.openTelegramLink) wa.openTelegramLink(url);
+  else window.open(url, '_blank', 'noopener,noreferrer');
 }

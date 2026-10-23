@@ -9,6 +9,8 @@ import CategoryFilter from '../components/CategoryFilter';
 import SortBar from '../components/SortBar';
 import { ProductGridSkeleton } from '../components/Skeleton';
 import { IconBox } from '../components/icons';
+import { openTelegramChat } from '../telegram/telegramWebApp';
+import { MANAGER_URL } from '../domain/shop';
 import './HomeScreen.css';
 
 function catFromParam(val: string | null): Category | null {
@@ -53,20 +55,10 @@ export default function HomeScreen() {
 
   return (
     <div className="page">
-      <div className="home-ticker">
-        <div className="home-ticker__track">
-          <span>
-            <IconBox size={14} className="home-ticker__icon" /> Возможно, ваш гаджет уже на складе, но мы ещё не успели добавить его на витрину.
-            Напишите менеджеру — он проверит наличие и забронирует устройство для вас!
-          </span>
-          <span>
-            <IconBox size={14} className="home-ticker__icon" /> Возможно, ваш гаджет уже на складе, но мы ещё не успели добавить его на витрину.
-            Напишите менеджеру — он проверит наличие и забронирует устройство для вас!
-          </span>
-        </div>
-      </div>
-
-      <h1 className="page-title">Si Phone</h1>
+      <header className="home-header">
+        <h1 className="page-title">Si Phone</h1>
+        <p className="home-header__sub">Оригинальная техника Apple</p>
+      </header>
       <CategoryFilter value={category} onChange={setCategory} />
       <SortBar value={sort} onChange={(v: SortOption) => setSort(v)} />
       <div className="product-grid">
@@ -101,6 +93,20 @@ export default function HomeScreen() {
           </p>
         )}
       </div>
+
+      {/* Тихая подсказка вместо бегущей строки: в конце витрины, где человек и ищет «а если нет?» */}
+      <section className="home-hint">
+        <IconBox size={22} className="home-hint__icon" />
+        <div className="home-hint__body">
+          <p className="home-hint__title">Не нашли свою модель?</p>
+          <p className="home-hint__text">
+            Возможно, она уже на складе, но ещё не на витрине. Менеджер проверит наличие и забронирует.
+          </p>
+          <button className="home-hint__link" onClick={() => openTelegramChat(MANAGER_URL)}>
+            Написать менеджеру
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

@@ -95,9 +95,11 @@ export default function ProductCard({ family, variants, skuVariant }: Props) {
         <h3 className="product-card__title">{family.title}</h3>
         <p className="product-card__desc">{family.description}</p>
         <div className="product-card__footer">
-          <span className="product-card__price">
-            {minPrice ? `от ${minPrice.toLocaleString('ru-RU')} ₽` : '—'}
-          </span>
+          {minPrice ? (
+            <span className="product-card__price">от {minPrice.toLocaleString('ru-RU')} ₽</span>
+          ) : (
+            <span className="product-card__price product-card__price--ask">Цена по запросу</span>
+          )}
           <span className={`badge ${inStock ? 'badge-stock' : 'badge-out'}`}>
             {inStock ? 'В наличии' : 'Нет в наличии'}
           </span>
