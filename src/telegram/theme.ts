@@ -1,4 +1,4 @@
-import { getTelegramColorScheme, onTelegramThemeChanged } from './telegramWebApp';
+import { getTelegramColorScheme, onTelegramThemeChanged, setTelegramChrome } from './telegramWebApp';
 
 // Тема магазина: ставит атрибуты на <html>, по ним работают токены в styles/theme.css.
 // По умолчанию — «Авто»: как в теме Telegram у пользователя (вне Telegram — как на телефоне).
@@ -37,6 +37,9 @@ export function applyTheme(): void {
     : mode;
   html.dataset.theme = mode;
   html.dataset.scheme = scheme;
+  // Шапка и фон Telegram — в цвет приложения: граница «Telegram — магазин» не видна.
+  const css = getComputedStyle(html);
+  setTelegramChrome(css.getPropertyValue('--color-bg').trim(), css.getPropertyValue('--color-surface').trim());
 }
 
 // Админка свёрстана только под светлую схему — на её время держим светлую.

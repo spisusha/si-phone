@@ -2,6 +2,7 @@ import type { Category } from '../domain/types';
 import { ALL_CATEGORIES } from '../domain/types';
 import { CategoryIcon } from './icons';
 import './CategoryFilter.css';
+import { haptic } from '../telegram/telegramWebApp';
 
 interface Props {
   value: Category | null;
@@ -13,7 +14,7 @@ export default function CategoryFilter({ value, onChange }: Props) {
     <div className="cat-filter">
       <button
         className={`cat-chip${value === null ? ' cat-chip--active' : ''}`}
-        onClick={() => onChange(null)}
+        onClick={() => { if (value !== null) haptic('select'); onChange(null); }}
       >
         Все
       </button>
@@ -21,7 +22,7 @@ export default function CategoryFilter({ value, onChange }: Props) {
         <button
           key={c}
           className={`cat-chip${value === c ? ' cat-chip--active' : ''}`}
-          onClick={() => onChange(c)}
+          onClick={() => { if (value !== c) haptic('select'); onChange(c); }}
         >
           <CategoryIcon category={c} size={16} /> {c}
         </button>

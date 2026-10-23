@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { showBackButton } from '../telegram/telegramWebApp';
 import BottomNav from '../components/BottomNav';
 import HomeScreen from '../screens/HomeScreen';
 import CatalogScreen from '../screens/CatalogScreen';
@@ -17,9 +18,34 @@ import Loader from '../components/Loader';
 // Админка (и библиотека Excel внутри неё) грузится отдельно — покупатель её не скачивает.
 const AdminScreen = lazy(() => import('../screens/AdminScreen'));
 
+// Главные экраны (вкладки нижнего меню и экран заказа) — без кнопки «Назад».
+const ROOT_PATHS = new Set(['/', '/catalog', '/cart', '/profile', '/result']);
+
+// Куда вести «Назад», если истории нет (открыли сразу по ссылке на товар).
+function parentPath(pathname: string): string {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts[0] === 'catalog') return '/' + parts.slice(0, -1).join('/');
+  if (parts[0] === 'checkout') return '/cart';
+  return '/';
+}
+
+// Системная кнопка «Назад» в шапке Telegram (на Android её же вызывает системная «назад»).
+function useTelegramBackButton(pathname: string) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (ROOT_PATHS.has(pathname) || pathname.startsWith('/admin')) return;
+    return showBackButton(() => {
+      const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+      if (idx > 0) navigate(-1);
+      else navigate(parentPath(pathname), { replace: true });
+    });
+  }, [pathname, navigate]);
+}
+
 function Layout() {
   const { pathname } = useLocation();
   const isAdmin = pathname.startsWith('/admin');
+  useTelegramBackButton(pathname);
 
   return (
     <>

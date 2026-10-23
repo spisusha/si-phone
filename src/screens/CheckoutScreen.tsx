@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api/orderRepo';
 import { cartItemSubtitle } from '../domain/variantFormat';
-import { getTgUser } from '../telegram/telegramWebApp';
+import { getTgUser, haptic, setClosingConfirmation } from '../telegram/telegramWebApp';
+import { useTelegramMainButton } from '../telegram/hooks';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
 import './CheckoutScreen.css';
 
@@ -18,20 +19,10 @@ export default function CheckoutScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  if (items.length === 0) {
-    // Корзина пуста: после оформления — на экран заказа, иначе — в корзину.
-    // <Navigate> вместо navigate() прямо в рендере.
-    let lastOrder: unknown = null;
-    try {
-      lastOrder = JSON.parse(sessionStorage.getItem('lastOrder') ?? 'null');
-    } catch { /* ignore */ }
-    return lastOrder
-      ? <Navigate to="/result" state={lastOrder} replace />
-      : <Navigate to="/cart" replace />;
-  }
-
   const handleSubmit = async () => {
+    if (submitting) return; // защита от двойного нажатия
     if (delivery === 'delivery' && !address.trim()) {
+      haptic('error');
       setError('Укажите адрес доставки');
       return;
     }
@@ -48,6 +39,7 @@ export default function CheckoutScreen() {
     setSubmitting(false);
 
     if (!result.ok) {
+      haptic('error');
       setError(result.error);
       return;
     }
@@ -65,10 +57,37 @@ export default function CheckoutScreen() {
       createdAt: new Date().toISOString(),
     };
     const resultState = { payload, orderId: result.orderId };
+    haptic('success');
     sessionStorage.setItem('lastOrder', JSON.stringify(resultState));
     clear();
     navigate('/result', { state: resultState, replace: true });
   };
+
+  // На этом экране легко потерять введённый адрес — Telegram спросит «Закрыть?».
+  useEffect(() => {
+    setClosingConfirmation(true);
+    return () => setClosingConfirmation(false);
+  }, []);
+
+  // Итоговое действие — большая кнопка Telegram с суммой и крутилкой на время отправки.
+  const nativeMain = useTelegramMainButton({
+    text: `Подтвердить заказ · ${total().toLocaleString('ru-RU')} ₽`,
+    onClick: handleSubmit,
+    visible: items.length > 0,
+    progress: submitting,
+  });
+
+  if (items.length === 0) {
+    // Корзина пуста: после оформления — на экран заказа, иначе — в корзину.
+    // <Navigate> вместо navigate() прямо в рендере.
+    let lastOrder: unknown = null;
+    try {
+      lastOrder = JSON.parse(sessionStorage.getItem('lastOrder') ?? 'null');
+    } catch { /* ignore */ }
+    return lastOrder
+      ? <Navigate to="/result" state={lastOrder} replace />
+      : <Navigate to="/cart" replace />;
+  }
 
   return (
     <div className="page">
@@ -186,13 +205,15 @@ export default function CheckoutScreen() {
 
       {error && <p className="checkout-error">{error}</p>}
 
-      <button
-        className="btn btn-primary btn-block"
-        onClick={handleSubmit}
-        disabled={submitting}
-      >
-        {submitting ? 'Оформляем...' : 'Подтвердить заказ'}
-      </button>
+      {!nativeMain && (
+        <button
+          className="btn btn-primary btn-block"
+          onClick={handleSubmit}
+          disabled={submitting}
+        >
+          {submitting ? 'Оформляем...' : 'Подтвердить заказ'}
+        </button>
+      )}
     </div>
   );
 }

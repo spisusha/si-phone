@@ -7,7 +7,7 @@ import { getMinPrice } from '../domain/catalogLogic';
 import ProductCard from '../components/ProductCard';
 import CategoryFilter from '../components/CategoryFilter';
 import SortBar from '../components/SortBar';
-import Loader from '../components/Loader';
+import { ProductGridSkeleton } from '../components/Skeleton';
 import { IconBox } from '../components/icons';
 import './HomeScreen.css';
 
@@ -49,7 +49,7 @@ export default function HomeScreen() {
     return sorted;
   }, [families, variants, category, sort]);
 
-  if (loading) return <Loader />;
+  if (loading) return <ProductGridSkeleton />;
 
   return (
     <div className="page">

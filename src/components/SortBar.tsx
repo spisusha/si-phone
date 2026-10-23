@@ -1,5 +1,6 @@
 import type { SortOption } from '../domain/types';
 import './SortBar.css';
+import { haptic } from '../telegram/telegramWebApp';
 
 const OPTIONS: { value: SortOption; label: string }[] = [
   { value: 'popularity', label: 'Популярные' },
@@ -20,7 +21,7 @@ export default function SortBar({ value, onChange }: Props) {
         <button
           key={o.value}
           className={`sort-chip${value === o.value ? ' sort-chip--active' : ''}`}
-          onClick={() => onChange(o.value)}
+          onClick={() => { if (value !== o.value) haptic('select'); onChange(o.value); }}
         >
           {o.label}
         </button>

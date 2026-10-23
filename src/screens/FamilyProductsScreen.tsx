@@ -3,7 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
 import type { Category, Variant } from '../domain/types';
 import ProductCard from '../components/ProductCard';
-import Loader from '../components/Loader';
+import { DetailSkeleton, ProductGridSkeleton } from '../components/Skeleton';
+import { hasNativeBackButton } from '../telegram/telegramWebApp';
+import { haptic } from '../telegram/telegramWebApp';
 import './CatalogScreen.css';
 
 function isConfigurator(category: Category, _title: string): boolean {
@@ -11,7 +13,10 @@ function isConfigurator(category: Category, _title: string): boolean {
   return false;
 }
 
+
 export default function FamilyProductsScreen() {
+  // В Telegram «Назад» — системная кнопка в шапке; своя стрелка — только в браузере.
+  const nativeBack = hasNativeBackButton();
   const { category: slug, familyId } = useParams<{ category: string; familyId: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, load } = useCatalogStore();
@@ -81,9 +86,9 @@ export default function FamilyProductsScreen() {
     });
   }, [deduped, isMacBook, chipFilter]);
 
-  if (loading) return <Loader />;
+  if (loading) return <ProductGridSkeleton />;
   if (!family) return <div className="page"><p>Модель не найдена</p></div>;
-  if (redirect) return <Loader />;
+  if (redirect) return <DetailSkeleton />;
 
   const sorted = [...filtered].sort((a, b) => {
     if (a.in_stock !== b.in_stock) return a.in_stock ? -1 : 1;
@@ -93,17 +98,19 @@ export default function FamilyProductsScreen() {
   return (
     <div className="page">
       <div className="catalog-header">
-        <button className="catalog-back" onClick={() => navigate(`/catalog/${slug}`)}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
+        {!nativeBack && (
+          <button className="catalog-back" onClick={() => navigate(`/catalog/${slug}`)}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        )}
         <h1 className="page-title" style={{ marginBottom: 0 }}>{family.title}</h1>
       </div>
 
       {isMacBook && chipGroups.length > 1 && (
         <div className="catalog-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, padding: '8px 0' }}>
-          <button className={`cat-chip${!chipFilter ? ' cat-chip--active' : ''}`} onClick={() => setChipFilter(null)}>Все чипы</button>
+          <button className={`cat-chip${!chipFilter ? ' cat-chip--active' : ''}`} onClick={() => { if (chipFilter !== null) haptic('select'); setChipFilter(null); }}>Все чипы</button>
           {chipGroups.map((c) => (
-            <button key={c} className={`cat-chip${chipFilter === c ? ' cat-chip--active' : ''}`} onClick={() => setChipFilter(c)}>{c}</button>
+            <button key={c} className={`cat-chip${chipFilter === c ? ' cat-chip--active' : ''}`} onClick={() => { if (chipFilter !== c) haptic('select'); setChipFilter(c); }}>{c}</button>
           ))}
         </div>
       )}

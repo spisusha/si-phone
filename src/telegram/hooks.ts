@@ -1,0 +1,39 @@
+import { useEffect, useRef } from 'react';
+import { hasNativeMainButton, showMainButton } from './telegramWebApp';
+
+function cssVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+interface MainButtonOptions {
+  text: string;
+  onClick: () => void;
+  visible?: boolean;
+  progress?: boolean;
+  disabled?: boolean;
+}
+
+/**
+ * Большая нижняя кнопка Telegram для итогового действия экрана.
+ * Возвращает true, если кнопка Telegram показана — тогда своя кнопка на странице не нужна.
+ * Вне Telegram (или в старой версии) возвращает false, и экран показывает свою кнопку.
+ */
+export function useTelegramMainButton({ text, onClick, visible = true, progress, disabled }: MainButtonOptions): boolean {
+  const native = hasNativeMainButton();
+  const clickRef = useRef(onClick);
+  useEffect(() => { clickRef.current = onClick; });
+
+  useEffect(() => {
+    if (!native || !visible) return;
+    return showMainButton({
+      text,
+      onClick: () => clickRef.current(),
+      progress,
+      disabled,
+      color: cssVar('--color-primary') || '#7ED957',
+      textColor: cssVar('--color-on-primary') || '#102A07',
+    });
+  }, [native, visible, text, progress, disabled]);
+
+  return native && visible;
+}

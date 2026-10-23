@@ -4,10 +4,15 @@ import { useCatalogStore } from '../store/catalogStore';
 import { useCartStore } from '../store/cartStore';
 import { formatWatchDisplay } from '../domain/watchFormat';
 import { getDisplayImages } from '../domain/imageUtils';
-import Loader from '../components/Loader';
+import { DetailSkeleton } from '../components/Skeleton';
+import { hasNativeBackButton } from '../telegram/telegramWebApp';
+import { haptic } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
 
+
 export default function SkuVariantScreen() {
+  // В Telegram «Назад» — системная кнопка в шапке; своя стрелка — только в браузере.
+  const nativeBack = hasNativeBackButton();
   const { variantId } = useParams<{ variantId: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, load } = useCatalogStore();
@@ -21,7 +26,8 @@ export default function SkuVariantScreen() {
   const variant = variants.find((v) => v.id === variantId);
   const family = variant ? families.find((f) => f.id === variant.family_id) : null;
 
-  if (loading || !variant || !family) return <Loader />;
+  if (loading) return <DetailSkeleton />;
+  if (!variant || !family) return <div className="page"><p className="catalog-empty">Товар не найден</p></div>;
 
   const isWatch = family.category === 'Watch';
   const isIphone = family.category === 'iPhone';
@@ -80,6 +86,7 @@ export default function SkuVariantScreen() {
       priceSnapshot: variant.price,
       image: images[0] || '',
     });
+    haptic('add');
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
@@ -88,11 +95,13 @@ export default function SkuVariantScreen() {
 
   return (
     <div className="page detail-page">
-      <button className="detail-back" onClick={() => navigate(-1)}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="15 18 9 12 15 6" />
-        </svg>
-      </button>
+      {!nativeBack && (
+        <button className="detail-back" onClick={() => navigate(-1)}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+      )}
 
       <div className="detail-gallery">
         <img

@@ -5,7 +5,7 @@ import { filterVariants, getMinPrice } from '../domain/catalogLogic';
 import type { SortOption } from '../domain/types';
 import ProductCard from '../components/ProductCard';
 import SortBar from '../components/SortBar';
-import Loader from '../components/Loader';
+import { ProductGridSkeleton } from '../components/Skeleton';
 import './ProductListScreen.css';
 
 export default function ProductListScreen() {
@@ -43,7 +43,7 @@ export default function ProductListScreen() {
     return sorted;
   }, [families, variants, filters, sort]);
 
-  if (loading) return <Loader />;
+  if (loading) return <ProductGridSkeleton />;
 
   const filterDesc = Object.entries(filters)
     .map(([k, v]) => `${k}: ${v}`)

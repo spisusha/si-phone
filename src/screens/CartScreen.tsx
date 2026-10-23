@@ -2,11 +2,21 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { cartItemSubtitle } from '../domain/variantFormat';
 import { IconCart, IconInfo } from '../components/icons';
+import { useTelegramMainButton } from '../telegram/hooks';
+import { haptic } from '../telegram/telegramWebApp';
 import './CartScreen.css';
 
 export default function CartScreen() {
   const { items, setQty, remove, total } = useCartStore();
   const navigate = useNavigate();
+  const sum = total();
+
+  // В Telegram итоговое действие — большая нижняя кнопка с суммой; своя — только в браузере.
+  const nativeMain = useTelegramMainButton({
+    text: `Оформить · ${sum.toLocaleString('ru-RU')} ₽`,
+    onClick: () => navigate('/checkout'),
+    visible: items.length > 0,
+  });
 
   if (items.length === 0) {
     return (
@@ -43,12 +53,12 @@ export default function CartScreen() {
                 {item.priceSnapshot.toLocaleString('ru-RU')} ₽
               </span>
               <div className="cart-item__qty">
-                <button onClick={() => setQty(item.variantId, item.qty - 1)}>−</button>
+                <button onClick={() => { haptic('select'); setQty(item.variantId, item.qty - 1); }} aria-label="Меньше">−</button>
                 <span>{item.qty}</span>
-                <button onClick={() => setQty(item.variantId, item.qty + 1)}>+</button>
+                <button onClick={() => { haptic('select'); setQty(item.variantId, item.qty + 1); }} aria-label="Больше">+</button>
               </div>
             </div>
-            <button className="cart-item__remove" onClick={() => remove(item.variantId)}>
+            <button className="cart-item__remove" onClick={() => { haptic('select'); remove(item.variantId); }} aria-label="Удалить из корзины">
               ✕
             </button>
           </div>
@@ -57,7 +67,7 @@ export default function CartScreen() {
 
       <div className="cart-total">
         <span>Итого</span>
-        <span className="cart-total__value">{total().toLocaleString('ru-RU')} ₽</span>
+        <span className="cart-total__value">{sum.toLocaleString('ru-RU')} ₽</span>
       </div>
 
       <p className="cart-price-note">
@@ -67,9 +77,11 @@ export default function CartScreen() {
         вас лучшее предложение после размещения заказа!</span>
       </p>
 
-      <button className="btn btn-primary btn-block" onClick={() => navigate('/checkout')}>
-        Оформить заказ
-      </button>
+      {!nativeMain && (
+        <button className="btn btn-primary btn-block" onClick={() => navigate('/checkout')}>
+          Оформить заказ
+        </button>
+      )}
     </div>
   );
 }

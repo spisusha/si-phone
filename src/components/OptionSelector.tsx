@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './OptionSelector.css';
+import { haptic } from '../telegram/telegramWebApp';
 
 interface Props {
   label: string;
@@ -16,10 +17,12 @@ export default function OptionSelector({ label, options, value, onChange, disabl
 
   const handleClick = (opt: string) => {
     if (disabledOptions.includes(opt)) {
+      haptic('warning');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 1500);
       return;
     }
+    if (opt !== value) haptic('select');
     onChange(opt);
   };
 

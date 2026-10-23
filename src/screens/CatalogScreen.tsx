@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
 import { ALL_CATEGORIES, type Category } from '../domain/types';
-import Loader from '../components/Loader';
+import { ListSkeleton } from '../components/Skeleton';
 import { CategoryIcon } from '../components/icons';
 import './CatalogScreen.css';
 
@@ -20,7 +20,7 @@ export default function CatalogScreen() {
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <Loader />;
+  if (loading) return <ListSkeleton rows={5} />;
 
   return (
     <div className="page">

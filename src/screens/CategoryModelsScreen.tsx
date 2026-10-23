@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
 import type { Category, ProductFamily, Variant } from '../domain/types';
 import ProductCard from '../components/ProductCard';
-import Loader from '../components/Loader';
+import { ListSkeleton } from '../components/Skeleton';
+import { hasNativeBackButton } from '../telegram/telegramWebApp';
 import './CatalogScreen.css';
 
 const SLUG_TO_CAT: Record<string, Category> = {
@@ -14,7 +15,10 @@ const SLUG_TO_CAT: Record<string, Category> = {
   airpods: 'AirPods',
 };
 
+
 export default function CategoryModelsScreen() {
+  // В Telegram «Назад» — системная кнопка в шапке; своя стрелка — только в браузере.
+  const nativeBack = hasNativeBackButton();
   const { category: slug } = useParams<{ category: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, load } = useCatalogStore();
@@ -74,15 +78,17 @@ export default function CategoryModelsScreen() {
 
   const maxFamily = isAirpods ? models.find((f) => /max/i.test(f.title)) : null;
 
-  if (loading) return <Loader />;
+  if (loading) return <ListSkeleton rows={6} />;
   if (!category) return <div className="page"><p>Категория не найдена</p></div>;
 
   return (
     <div className="page">
       <div className="catalog-header">
-        <button className="catalog-back" onClick={() => navigate('/catalog')}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
+        {!nativeBack && (
+          <button className="catalog-back" onClick={() => navigate('/catalog')}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+        )}
         <h1 className="page-title" style={{ marginBottom: 0 }}>{category}</h1>
       </div>
 
