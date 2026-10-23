@@ -1,4 +1,5 @@
 import { getTgUser } from '../telegram/telegramWebApp';
+import { IconPhone, IconPin, IconTelegram } from '../components/icons';
 import './ProfileScreen.css';
 
 export default function ProfileScreen() {
@@ -49,7 +50,7 @@ export default function ProfileScreen() {
         <h3>Контакты</h3>
         <div className="profile-contacts">
           <div className="profile-contact-row">
-            <span>📞</span>
+            <IconPhone size={20} className="profile-contact-icon" />
             <span>
               <a href="tel:+79164050444" className="profile-contact-link">+7 916 405-04-44</a>
               {' и '}
@@ -57,7 +58,7 @@ export default function ProfileScreen() {
             </span>
           </div>
           <div className="profile-contact-row">
-            <span>💬</span>
+            <IconTelegram size={20} className="profile-contact-icon" />
             <span>
               <a href="https://t.me/andr3i23" target="_blank" rel="noopener noreferrer" className="profile-contact-link">@andr3i23</a>
               {' и '}
@@ -65,7 +66,7 @@ export default function ProfileScreen() {
             </span>
           </div>
           <div className="profile-contact-row">
-            <span>📍</span>
+            <IconPin size={20} className="profile-contact-icon" />
             <span>город Москва</span>
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { cartItemSubtitle } from '../domain/variantFormat';
+import { IconCart, IconInfo } from '../components/icons';
 import './CartScreen.css';
 
 export default function CartScreen() {
@@ -10,7 +11,7 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <div className="page cart-empty">
-        <div className="cart-empty-icon">🛒</div>
+        <IconCart size={56} className="cart-empty-icon" />
         <h2>Корзина пуста</h2>
         <p>Добавьте товары из каталога</p>
         <button className="btn btn-primary" onClick={() => navigate('/')}>
@@ -60,9 +61,10 @@ export default function CartScreen() {
       </div>
 
       <p className="cart-price-note">
-        ℹ️ Мы стараемся держать цены актуальными, но из-за высокой волатильности
+        <IconInfo size={18} className="cart-price-note__icon" />
+        <span>Мы стараемся держать цены актуальными, но из-за высокой волатильности
         рынка цены на сайте носят информативный характер. Менеджер зафиксирует для
-        вас лучшее предложение после размещения заказа!
+        вас лучшее предложение после размещения заказа!</span>
       </p>
 
       <button className="btn btn-primary btn-block" onClick={() => navigate('/checkout')}>

@@ -19,14 +19,15 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  font-size: 10px;
+  font-size: var(--fs-tiny);
+  font-weight: 500;
   color: var(--color-muted);
   transition: color 0.15s;
   padding: 10px 16px 6px;
 }
 
 .nav-item.active {
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .cart-icon-wrap {
@@ -38,8 +39,8 @@
   top: -6px;
   right: -10px;
   background: var(--color-primary);
-  color: #fff;
-  font-size: 10px;
+  color: var(--color-on-primary);
+  font-size: var(--fs-tiny);
   font-weight: 700;
   min-width: 16px;
   height: 16px;

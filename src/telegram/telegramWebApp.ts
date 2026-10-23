@@ -15,6 +15,8 @@ interface TelegramWebApp {
     onClick: (cb: () => void) => void;
   };
   themeParams: Record<string, string>;
+  colorScheme?: 'light' | 'dark';
+  onEvent?: (event: string, cb: () => void) => void;
 }
 
 declare global {
@@ -49,4 +51,14 @@ export function getInitData(): string {
 
 export function isTelegramEnv(): boolean {
   return !!getWebApp()?.initData;
+}
+
+// Схема текущей темы Telegram; null — открыто не в Telegram.
+export function getTelegramColorScheme(): 'light' | 'dark' | null {
+  const wa = getWebApp();
+  return wa?.initData && wa.colorScheme ? wa.colorScheme : null;
+}
+
+export function onTelegramThemeChanged(cb: () => void): void {
+  getWebApp()?.onEvent?.('themeChanged', cb);
 }

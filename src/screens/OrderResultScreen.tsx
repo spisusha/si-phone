@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { OrderPayload } from '../domain/types';
 import { cartItemSubtitle } from '../domain/variantFormat';
+import { IconBox, IconCheckCircle } from '../components/icons';
 import './OrderResultScreen.css';
 
 interface LocationState {
@@ -28,7 +29,7 @@ export default function OrderResultScreen() {
   if (!state) {
     return (
       <div className="page result-page">
-        <div className="result-icon">📦</div>
+        <IconBox size={64} className="result-icon" />
         <h1 className="result-title">Заказ отправлен</h1>
         <p className="result-subtitle">
           Ваш заказ в обработке. Менеджер свяжется с вами в ближайшее время.
@@ -44,7 +45,7 @@ export default function OrderResultScreen() {
 
   return (
     <div className="page result-page">
-      <div className="result-icon">✅</div>
+      <IconCheckCircle size={64} className="result-icon result-icon--ok" />
       <h1 className="result-title">Заказ оформлен!</h1>
       <p className="result-subtitle">
         Спасибо за заказ! Менеджер свяжется с вами в ближайшее время

@@ -1,19 +1,12 @@
 import type { Category } from '../domain/types';
 import { ALL_CATEGORIES } from '../domain/types';
+import { CategoryIcon } from './icons';
 import './CategoryFilter.css';
 
 interface Props {
   value: Category | null;
   onChange: (c: Category | null) => void;
 }
-
-const ICONS: Record<Category, string> = {
-  iPhone: '📱',
-  iPad: '📟',
-  MacBook: '💻',
-  Watch: '⌚',
-  AirPods: '🎧',
-};
 
 export default function CategoryFilter({ value, onChange }: Props) {
   return (
@@ -30,7 +23,7 @@ export default function CategoryFilter({ value, onChange }: Props) {
           className={`cat-chip${value === c ? ' cat-chip--active' : ''}`}
           onClick={() => onChange(c)}
         >
-          <span>{ICONS[c]}</span> {c}
+          <CategoryIcon category={c} size={16} /> {c}
         </button>
       ))}
     </div>

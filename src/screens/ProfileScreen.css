@@ -17,7 +17,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), #4CAF50);
+  background: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,7 +34,7 @@
 .profile-avatar__letter {
   font-size: 26px;
   font-weight: 700;
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .profile-info {
@@ -95,11 +95,11 @@
 
 .profile-about__note {
   font-weight: 500;
-  color: var(--color-primary) !important;
+  color: var(--color-accent) !important;
 }
 
 .profile-contact-link {
-  color: var(--color-primary);
+  color: var(--color-accent);
   text-decoration: none;
   font-weight: 500;
 }
@@ -121,8 +121,13 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  font-size: 14px;
+  font-size: var(--fs-sub);
   border-bottom: 1px solid var(--color-border);
+}
+
+.profile-contact-icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .profile-contact-row:last-child {

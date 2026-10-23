@@ -15,7 +15,7 @@
 }
 
 .detail-gallery {
-  background: var(--color-surface);
+  background: var(--color-media-bg);
   border-radius: var(--radius-lg);
   padding: 24px;
   display: flex;
@@ -28,6 +28,7 @@
 .detail-gallery img {
   max-height: 240px;
   object-fit: contain;
+  mix-blend-mode: multiply;
 }
 
 .detail-dots {

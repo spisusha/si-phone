@@ -14,11 +14,13 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, Roboto, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: var(--fs-sub);
   background: var(--color-bg);
   color: var(--color-text);
   line-height: 1.4;
   min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
 
@@ -48,6 +50,7 @@ input, select, textarea {
   background: var(--color-surface);
   color: var(--color-text);
   width: 100%;
+  font-size: var(--fs-body); /* от 16px: iPhone не приближает страницу при вводе */
 }
 
 input:focus, select:focus, textarea:focus {
@@ -72,8 +75,10 @@ input:focus, select:focus, textarea:focus {
 }
 
 .page-title {
-  font-size: 22px;
+  font-size: var(--fs-title);
   font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
   margin-bottom: 16px;
 }
 
@@ -82,10 +87,11 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: center;
   gap: 6px;
+  min-height: 48px;
   padding: 12px 24px;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 15px;
+  font-size: var(--fs-body);
   transition: background 0.15s, transform 0.1s;
 }
 
@@ -95,7 +101,7 @@ input:focus, select:focus, textarea:focus {
 
 .btn-primary {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
 }
 
 .btn-primary:hover {
@@ -103,8 +109,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .btn-outline {
-  border: 1.5px solid var(--color-primary);
-  color: var(--color-primary);
+  border: 1.5px solid var(--color-accent);
+  color: var(--color-accent);
 }
 
 .btn-block {
@@ -113,9 +119,9 @@ input:focus, select:focus, textarea:focus {
 
 .badge {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 99px;
-  font-size: 11px;
+  font-size: var(--fs-cap);
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -123,13 +129,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 .badge-stock {
-  background: var(--color-primary-light);
-  color: #3a8520;
+  background: var(--color-stock-bg);
+  color: var(--color-stock-text);
 }
 
 .badge-out {
-  background: #fef2f2;
-  color: var(--color-danger);
+  background: var(--color-out-bg);
+  color: var(--color-out-text);
 }
 
 ::-webkit-scrollbar {

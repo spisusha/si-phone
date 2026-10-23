@@ -11,8 +11,9 @@
   flex-shrink: 0;
   padding: 6px 14px;
   border-radius: 99px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 500;
+  min-height: 38px;
   border: 1.5px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-muted);
@@ -21,6 +22,6 @@
 
 .sort-chip--active {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-on-primary);
   border-color: var(--color-primary);
 }

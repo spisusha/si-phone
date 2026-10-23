@@ -8,6 +8,7 @@ import ProductCard from '../components/ProductCard';
 import CategoryFilter from '../components/CategoryFilter';
 import SortBar from '../components/SortBar';
 import Loader from '../components/Loader';
+import { IconBox } from '../components/icons';
 import './HomeScreen.css';
 
 function catFromParam(val: string | null): Category | null {
@@ -55,11 +56,11 @@ export default function HomeScreen() {
       <div className="home-ticker">
         <div className="home-ticker__track">
           <span>
-            📦 Возможно, ваш гаджет уже на складе, но мы ещё не успели добавить его на витрину.
+            <IconBox size={14} className="home-ticker__icon" /> Возможно, ваш гаджет уже на складе, но мы ещё не успели добавить его на витрину.
             Напишите менеджеру — он проверит наличие и забронирует устройство для вас!
           </span>
           <span>
-            📦 Возможно, ваш гаджет уже на складе, но мы ещё не успели добавить его на витрину.
+            <IconBox size={14} className="home-ticker__icon" /> Возможно, ваш гаджет уже на складе, но мы ещё не успели добавить его на витрину.
             Напишите менеджеру — он проверит наличие и забронирует устройство для вас!
           </span>
         </div>

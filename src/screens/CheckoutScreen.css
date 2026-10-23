@@ -24,6 +24,8 @@
   object-fit: contain;
   border-radius: 8px;
   flex-shrink: 0;
+  padding: 4px;
+  background: var(--color-media-bg);
 }
 
 .checkout-item__info {
@@ -52,7 +54,7 @@
 .checkout-item__price {
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .checkout-section h3 {

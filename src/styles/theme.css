@@ -1,19 +1,103 @@
+/*
+ * Токены Si Phone.
+ * Характер магазина не меняем: светлый iOS-стиль, фирменный зелёный #7ED957.
+ * Контраст текста — не ниже 4,5:1 (проверено расчётом):
+ *   белый на #7ED957 — 1,76 (было, плохо) → тёмный текст на #7ED957 — 8,8;
+ *   ссылки и цены #287A33 на белом — 5,35; серый #6e6e73 на белом — 5,07.
+ *
+ * Режимы (атрибуты на <html>, ставит src/telegram/theme.ts):
+ *   data-theme="auto"  — цвета из темы Telegram (вне Telegram — по настройке телефона);
+ *   data-theme="light" — принудительно светлая (админка);
+ *   data-scheme="light|dark" — фактическая схема (для акцентов, бейджей, теней).
+ * Кнопка — фирменный зелёный с тёмным текстом (выбор Романа, 23.10.2026).
+ */
+
 :root {
+  /* Палитра светлой схемы */
+  --p-bg: #f5f5f7;
+  --p-surface: #ffffff;
+  --p-text: #1d1d1f;
+  --p-muted: #6e6e73;
+  --p-border: #e5e5ea;
+  --p-accent: #287A33;
+  --p-primary-light: rgba(126, 217, 87, 0.16);
+  --p-stock-bg: #e8f6e2;
+  --p-stock-text: #287A33;
+  --p-out-bg: #fdecea;
+  --p-out-text: #c4281c;
+  --p-shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  --p-shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.10);
+
+  /* Кнопка: фирменный зелёный + тёмный текст */
   --color-primary: #7ED957;
   --color-primary-hover: #6bc948;
-  --color-primary-light: rgba(126, 217, 87, 0.12);
-  --color-bg: #f5f5f7;
-  --color-surface: #ffffff;
-  --color-text: #1d1d1f;
-  --color-muted: #86868b;
-  --color-border: #e5e5ea;
+  --color-on-primary: #102A07;
+
+  /* Подложка под фото товаров — светлая в обеих схемах:
+     фото техники на белом фоне не превращаются в «белые прямоугольники». */
+  --color-media-bg: #f4f4f6;
+
   --color-danger: #ff3b30;
   --color-success: #34c759;
+
+  /* Размеры текста — шкала iOS (pt ≈ px) */
+  --fs-title: 28px;
+  --fs-h2: 20px;
+  --fs-body: 16px;
+  --fs-sub: 15px;
+  --fs-foot: 13px;
+  --fs-cap: 12px;
+  --fs-tiny: 11px;
+
   --radius-sm: 8px;
   --radius-md: 14px;
   --radius-lg: 20px;
-  --shadow-card: 0 1px 4px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
-  --shadow-elevated: 0 4px 24px rgba(0,0,0,0.10);
   --nav-height: 56px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tap: 44px; /* минимальная зона нажатия (Apple HIG) */
+}
+
+/* Палитра тёмной схемы (как у тёмного iOS/Telegram) */
+html[data-scheme='dark'] {
+  --p-bg: #000000;
+  --p-surface: #1c1c1e;
+  --p-text: #f5f5f7;
+  --p-muted: #8e8e93;
+  --p-border: #38383a;
+  --p-accent: #7ED957;
+  --p-primary-light: rgba(126, 217, 87, 0.18);
+  --p-stock-bg: rgba(126, 217, 87, 0.16);
+  --p-stock-text: #8fe36a;
+  --p-out-bg: rgba(255, 69, 58, 0.18);
+  --p-out-text: #ff6961;
+  --p-shadow-card: none;
+  --p-shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+/* Токены, которыми пользуется весь CSS */
+:root {
+  --color-bg: var(--p-bg);
+  --color-surface: var(--p-surface);
+  --color-text: var(--p-text);
+  --color-muted: var(--p-muted);
+  --color-border: var(--p-border);
+  --color-accent: var(--p-accent);
+  --color-primary-light: var(--p-primary-light);
+  --color-stock-bg: var(--p-stock-bg);
+  --color-stock-text: var(--p-stock-text);
+  --color-out-bg: var(--p-out-bg);
+  --color-out-text: var(--p-out-text);
+  --shadow-card: var(--p-shadow-card);
+  --shadow-elevated: var(--p-shadow-elevated);
+}
+
+/* «Как в Telegram»: фон, карточки, текст и разделители — из темы пользователя.
+   Серый текст оставляем свой: hint-цвет Telegram на белом даёт меньше 3:1. */
+html[data-theme='auto'] {
+  --color-bg: var(--tg-theme-secondary-bg-color, var(--p-bg));
+  --color-surface: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color, var(--p-surface)));
+  --color-text: var(--tg-theme-text-color, var(--p-text));
+  --color-border: var(--tg-theme-section-separator-color, var(--p-border));
+  --color-danger: var(--tg-theme-destructive-text-color, #ff3b30);
 }

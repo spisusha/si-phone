@@ -19,7 +19,15 @@
 }
 
 .catalog-cat-icon {
-  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--color-primary-light);
+  color: var(--color-accent);
+  flex-shrink: 0;
 }
 
 .catalog-cat-label {
@@ -186,11 +194,11 @@
 }
 
 .badge-sm--stock {
-  background: rgba(52, 199, 89, 0.12);
-  color: var(--color-success);
+  background: var(--color-stock-bg);
+  color: var(--color-stock-text);
 }
 
 .badge-sm--out {
-  background: rgba(255, 59, 48, 0.1);
-  color: var(--color-danger);
+  background: var(--color-out-bg);
+  color: var(--color-out-text);
 }

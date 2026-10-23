@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { read, utils } from 'xlsx';
 import { supabase } from '../api/supabaseClient';
+import { lockLightTheme } from '../telegram/theme';
 import './AdminPricesScreen.css';
 import './AdminMediaScreen.css';
 import './AdminScreen.css';
@@ -1009,6 +1010,8 @@ function ColorMediaSection({ category, storagePath, label, filterTitle }: {
 // ═══════════════════════════════════════════════════════════════════════
 
 export default function AdminScreen() {
+  // Админка свёрстана под светлую схему — держим её светлой и в тёмном Telegram.
+  useEffect(() => lockLightTheme(), []);
   const [authed, setAuthed] = useState(() => !!getAuth());
   const [tab, setTab] = useState<Tab>('prices');
 

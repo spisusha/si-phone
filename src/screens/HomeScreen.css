@@ -23,6 +23,12 @@
   white-space: nowrap;
 }
 
+.home-ticker__icon {
+  display: inline-block;
+  vertical-align: -2px;
+  color: var(--color-accent);
+}
+
 @keyframes ticker {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }

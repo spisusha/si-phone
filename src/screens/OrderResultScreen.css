@@ -3,9 +3,13 @@
 }
 
 .result-icon {
-  font-size: 56px;
-  margin-bottom: 12px;
-  margin-top: 24px;
+  display: block;
+  margin: 24px auto 12px;
+  color: var(--color-muted);
+}
+
+.result-icon--ok {
+  color: var(--color-accent);
 }
 
 .result-title {

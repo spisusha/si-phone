@@ -3,15 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
 import { ALL_CATEGORIES, type Category } from '../domain/types';
 import Loader from '../components/Loader';
+import { CategoryIcon } from '../components/icons';
 import './CatalogScreen.css';
-
-const CAT_ICONS: Record<Category, string> = {
-  iPhone: '📱',
-  iPad: '📟',
-  MacBook: '💻',
-  Watch: '⌚',
-  AirPods: '🎧',
-};
 
 const CAT_SLUG: Record<Category, string> = {
   iPhone: 'iphone',
@@ -39,7 +32,7 @@ export default function CatalogScreen() {
             className="catalog-cat-btn"
             onClick={() => navigate(`/catalog/${CAT_SLUG[cat]}`)}
           >
-            <span className="catalog-cat-icon">{CAT_ICONS[cat]}</span>
+            <span className="catalog-cat-icon"><CategoryIcon category={cat} size={22} /></span>
             <span className="catalog-cat-label">{cat}</span>
             <span className="catalog-cat-count">
               {families.filter((f) => f.category === cat).length} моделей
