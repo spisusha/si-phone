@@ -1,9 +1,23 @@
+import { useState } from 'react';
 import { getTgUser } from '../telegram/telegramWebApp';
+import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
 import { IconPhone, IconPin, IconTelegram } from '../components/icons';
 import './ProfileScreen.css';
 
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: 'auto', label: 'Авто' },
+  { value: 'light', label: 'Светлая' },
+  { value: 'dark', label: 'Тёмная' },
+];
+
 export default function ProfileScreen() {
   const tgUser = getTgUser();
+  const [theme, setTheme] = useState(getThemeMode);
+
+  const chooseTheme = (mode: ThemeMode) => {
+    setThemeMode(mode);
+    setTheme(mode);
+  };
 
   const firstName = tgUser?.first_name || 'Пользователь';
   const lastName = tgUser?.last_name || '';
@@ -70,6 +84,24 @@ export default function ProfileScreen() {
             <span>город Москва</span>
           </div>
         </div>
+      </div>
+
+      <div className="profile-section">
+        <h3>Оформление</h3>
+        <div className="profile-theme" role="radiogroup" aria-label="Тема оформления">
+          {THEME_OPTIONS.map((o) => (
+            <button
+              key={o.value}
+              role="radio"
+              aria-checked={theme === o.value}
+              className={`profile-theme__option${theme === o.value ? ' is-active' : ''}`}
+              onClick={() => chooseTheme(o.value)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="profile-theme__hint">«Авто» — как в Telegram</p>
       </div>
 
       <p className="profile-version">Версия 1.0.0</p>

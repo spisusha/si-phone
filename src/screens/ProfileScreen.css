@@ -134,6 +134,38 @@
   border-bottom: none;
 }
 
+.profile-theme {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-theme__option {
+  flex: 1;
+  min-height: 38px;
+  border-radius: 9px;
+  font-size: var(--fs-foot);
+  font-weight: 500;
+  color: var(--color-muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.profile-theme__option.is-active {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.profile-theme__hint {
+  font-size: var(--fs-cap);
+  color: var(--color-muted);
+  margin-top: 6px;
+  padding-left: 4px;
+}
+
 .profile-version {
   text-align: center;
   font-size: 12px;
