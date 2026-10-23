@@ -6,6 +6,7 @@ const encoder = new TextEncoder();
 
 // Срок жизни токена админа. Отозвать все токены сразу — сменить секрет ADMIN_TOKEN_SECRET.
 const TOKEN_TTL_SEC = 12 * 60 * 60;
+const DEVICE_TTL_SEC = 90 * 24 * 60 * 60;
 
 async function getKey(): Promise<CryptoKey> {
   const secret = Deno.env.get('ADMIN_TOKEN_SECRET');
@@ -36,12 +37,14 @@ function b64urlDecode(str: string): string {
   return atob(s);
 }
 
-export async function signAdminToken(): Promise<{ token: string; expiresAt: string }> {
+type TokenRole = 'admin' | 'device';
+
+async function signToken(role: TokenRole, ttlSec: number): Promise<{ token: string; expiresAt: string }> {
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + TOKEN_TTL_SEC;
+  const exp = now + ttlSec;
 
   const header = b64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = b64urlEncode(JSON.stringify({ role: 'admin', iat: now, exp }));
+  const payload = b64urlEncode(JSON.stringify({ role, iat: now, exp }));
   const data = `${header}.${payload}`;
 
   const key = await getKey();
@@ -53,11 +56,8 @@ export async function signAdminToken(): Promise<{ token: string; expiresAt: stri
   };
 }
 
-export async function verifyAdminToken(req: Request): Promise<boolean> {
-  const auth = req.headers.get('Authorization');
-  if (!auth?.startsWith('Bearer ')) return false;
-
-  const parts = auth.slice(7).split('.');
+async function verifyToken(token: string, role: TokenRole): Promise<boolean> {
+  const parts = token.split('.');
   if (parts.length !== 3) return false;
 
   try {
@@ -74,14 +74,36 @@ export async function verifyAdminToken(req: Request): Promise<boolean> {
     if (header.alg !== 'HS256') return false;
 
     const payload = JSON.parse(b64urlDecode(parts[1]));
-    // exp и роль обязательны: токен без срока или без роли не принимаем.
-    if (payload.role !== 'admin') return false;
+    // exp и роль обязательны: токен без срока или с чужой ролью не принимаем
+    // (метка устройства не открывает админку, токен админа не заменяет метку).
+    if (payload.role !== role) return false;
     if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return false;
 
     return true;
   } catch {
     return false;
   }
+}
+
+export function signAdminToken(): Promise<{ token: string; expiresAt: string }> {
+  return signToken('admin', TOKEN_TTL_SEC);
+}
+
+export async function verifyAdminToken(req: Request): Promise<boolean> {
+  const auth = req.headers.get('Authorization');
+  if (!auth?.startsWith('Bearer ')) return false;
+  return verifyToken(auth.slice(7), 'admin');
+}
+
+// «Доверенное устройство»: выдаётся после верного пароля и живёт 90 дней.
+// Сама по себе ничего не открывает — только снимает с владельца общий потолок
+// неудачных попыток, чтобы чужой перебор не мог закрыть ему вход.
+export function signDeviceToken(): Promise<{ token: string; expiresAt: string }> {
+  return signToken('device', DEVICE_TTL_SEC);
+}
+
+export function verifyDeviceToken(token: unknown): Promise<boolean> {
+  return typeof token === 'string' && token.length < 2048 ? verifyToken(token, 'device') : Promise.resolve(false);
 }
 
 export function unauthorized(): Response {

@@ -1,16 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
-import { signAdminToken } from '../_shared/adminAuth.ts';
+import { signAdminToken, signDeviceToken, verifyDeviceToken } from '../_shared/adminAuth.ts';
 
 // Ограничение подбора пароля за 15 минут:
 // - не больше 5 ошибок с одного адреса (IPv6 — с одного блока /64);
-// - общий потолок 300 ошибок — против перебора сразу со множества адресов. Он высокий,
-//   чтобы злоумышленник не мог за минуту нарочно закрыть вход самому владельцу;
+// - общий потолок 300 ошибок — против перебора сразу со множества адресов.
+//   Владельца он не касается: после верного пароля устройство получает подписанную
+//   метку на 90 дней, и с ней общий потолок снимается (чужой перебор не закроет вход);
 // - пауза 1,5 с после каждой ошибки.
 // Даже при потолке это ~29 тыс. попыток в сутки — для случайного пароля от 16 символов
 // подбор нереален. Поэтому слабый пароль (короткий или только цифры) не принимаем вовсе.
 const WINDOW_MIN = 15;
 const MAX_FAILS_PER_IP = 5;
+const MAX_FAILS_PER_IP_TRUSTED = 20;
 const MAX_FAILS_GLOBAL = 300;
 const FAIL_DELAY_MS = 1500;
 const MIN_PASSWORD_LENGTH = 16;
@@ -33,6 +35,8 @@ async function safeEqual(a: string, b: string): Promise<boolean> {
 // IPv6: у одного абонента обычно целый блок /64 — считаем по нему,
 // иначе смена адреса внутри блока обходила бы лимит.
 function normalizeIp(ip: string): string {
+  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(ip);
+  if (mapped) return mapped[1]; // IPv4, записанный как IPv6
   if (!ip.includes(':')) return ip;
   const [head, tail = ''] = ip.toLowerCase().split('%')[0].split('::');
   const h = head ? head.split(':') : [];
@@ -75,11 +79,16 @@ Deno.serve(withCors(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
     const ip = clientIp(req);
+    const body = (await req.json().catch(() => ({}))) as { password?: string; pin?: string; deviceToken?: string };
+    const trusted = await verifyDeviceToken(body.deviceToken);
 
     // Попытка записывается ДО проверки пароля одной операцией в базе (с блокировкой по адресу),
     // поэтому пачка одновременных запросов не обойдёт лимит.
     const { data: attemptId, error: limitErr } = await sb.rpc('admin_login_begin', {
-      p_ip: ip, p_window_min: WINDOW_MIN, p_max_fails: MAX_FAILS_PER_IP, p_max_global: MAX_FAILS_GLOBAL,
+      p_ip: ip,
+      p_window_min: WINDOW_MIN,
+      p_max_fails: trusted ? MAX_FAILS_PER_IP_TRUSTED : MAX_FAILS_PER_IP,
+      p_max_global: trusted ? null : MAX_FAILS_GLOBAL,
     });
     // Не смогли проверить лимит — не пускаем (а не «пускаем, раз проверка сломалась»).
     if (limitErr) {
@@ -90,7 +99,6 @@ Deno.serve(withCors(async (req) => {
       return json({ error: 'Слишком много попыток. Попробуйте через 15 минут' }, 429);
     }
 
-    const body = (await req.json().catch(() => ({}))) as { password?: string; pin?: string };
     const input = String(body.password ?? body.pin ?? '').slice(0, 256);
     const ok = input.length > 0 && (await safeEqual(input, secret));
 
@@ -101,7 +109,8 @@ Deno.serve(withCors(async (req) => {
     await sb.from('admin_login_attempts').update({ ok: true }).eq('id', attemptId);
 
     const { token, expiresAt } = await signAdminToken();
-    return json({ token, expiresAt });
+    const device = await signDeviceToken();
+    return json({ token, expiresAt, deviceToken: device.token });
   } catch (err) {
     console.error('admin-login error:', err);
     return json({ error: 'Ошибка входа' }, 500);

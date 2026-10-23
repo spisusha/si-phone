@@ -10,6 +10,8 @@ const BASE = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const LS_TOKEN = 'admin_token';
 const LS_EXPIRES = 'admin_expires';
+// Метка «доверенного устройства» (90 дней): снимает общий потолок ошибок входа для владельца.
+const LS_DEVICE = 'admin_device';
 
 type Tab = 'prices' | 'media';
 
@@ -73,12 +75,13 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
       const res = await fetch(`${BASE}/functions/v1/admin-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: ANON },
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ password: pin, deviceToken: localStorage.getItem(LS_DEVICE) ?? undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
       localStorage.setItem(LS_TOKEN, data.token);
       localStorage.setItem(LS_EXPIRES, data.expiresAt);
+      if (data.deviceToken) localStorage.setItem(LS_DEVICE, data.deviceToken);
       onLogin();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');

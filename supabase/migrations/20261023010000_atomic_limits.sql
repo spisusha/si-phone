@@ -5,9 +5,11 @@
 
 -- 1. Вход в админку: попытка записывается ДО проверки пароля (как неудачная),
 --    под блокировкой по адресу. После верного пароля её отмечают успешной.
---    Два предела: по адресу (p_max_fails) и общий высокий потолок (p_max_global) —
---    против перебора сразу со множества адресов. Потолок высокий, чтобы нельзя было
---    за пару минут нарочно закрыть вход владельцу.
+--    Два предела: по адресу (p_max_fails) и общий потолок (p_max_global) — против перебора
+--    сразу со множества адресов. Для доверенного устройства владельца сервер передаёт
+--    p_max_global = null: чужой перебор не закрывает ему вход.
+--    Общая блокировка на время проверки — чтобы параллельные запросы не перескочили потолок
+--    (вход в админку редкий, очередь из-за этого не заметна).
 create or replace function public.admin_login_begin(
   p_ip text, p_window_min int, p_max_fails int, p_max_global int
 )
@@ -20,11 +22,11 @@ declare
   since timestamptz := now() - make_interval(mins => p_window_min);
   attempt_id bigint;
 begin
-  perform pg_advisory_xact_lock(hashtextextended('admin_login:' || p_ip, 0));
+  perform pg_advisory_xact_lock(hashtextextended('admin_login:global', 0));
   if (select count(*) from public.admin_login_attempts
       where ip = p_ip and ok = false and created_at > since) >= p_max_fails
-     or (select count(*) from public.admin_login_attempts
-      where ok = false and created_at > since) >= p_max_global then
+     or (p_max_global is not null and (select count(*) from public.admin_login_attempts
+      where ok = false and created_at > since) >= p_max_global) then
     return null; -- лимит исчерпан
   end if;
   insert into public.admin_login_attempts (ip, ok) values (p_ip, false) returning id into attempt_id;
