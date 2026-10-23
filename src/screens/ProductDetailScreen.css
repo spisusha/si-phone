@@ -91,24 +91,6 @@
   margin-bottom: 16px;
 }
 
-.detail-add {
-  margin-bottom: 24px;
-}
-
-.detail-add:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.detail-add--done {
-  background: var(--color-success);
-}
-
-.detail-add--out {
-  background: var(--color-muted);
-  border-color: var(--color-muted);
-}
-
 /* ── Color picker ── */
 
 .color-picker {

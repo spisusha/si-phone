@@ -1,0 +1,51 @@
+/* ── Полоса «В корзину · цена» над нижним меню (вне Telegram) ── */
+
+.atc-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-height) + var(--safe-bottom));
+  z-index: 90;
+  padding: 10px 16px 8px;
+  background: var(--color-bg);
+}
+
+/* Мягкий переход от страницы к полосе вместо жёсткой линии */
+.atc-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 16px;
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+  pointer-events: none;
+}
+
+.atc-bar__btn {
+  display: block;
+  max-width: 448px;
+  margin: 0 auto;
+  min-height: 48px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+}
+
+.atc-bar .atc-bar__btn:disabled {
+  background: var(--color-border);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+/* «В корзине · Перейти» — то же место, спокойнее цвет */
+.atc-bar .atc-bar__btn--go,
+.atc-bar .atc-bar__btn--go:hover {
+  background: var(--color-primary-light);
+  color: var(--color-accent);
+}
+
+/* Место под полосу, чтобы низ страницы не прятался */
+.detail-page--bar {
+  padding-bottom: 76px;
+}

@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
-import { useCartStore } from '../store/cartStore';
 import { formatWatchDisplay } from '../domain/watchFormat';
 import { getDisplayImages } from '../domain/imageUtils';
 import { DetailSkeleton } from '../components/Skeleton';
-import { hasNativeBackButton } from '../telegram/telegramWebApp';
-import { haptic } from '../telegram/telegramWebApp';
+import AddToCart from '../components/AddToCart';
+import { hasNativeBackButton, hasNativeMainButton } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
 
 
@@ -16,10 +15,7 @@ export default function SkuVariantScreen() {
   const { variantId } = useParams<{ variantId: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, load } = useCatalogStore();
-  const addToCart = useCartStore((s) => s.add);
-
   const [imgIdx, setImgIdx] = useState(0);
-  const [added, setAdded] = useState(false);
 
   useEffect(() => { load(); }, [load]);
 
@@ -76,25 +72,18 @@ export default function SkuVariantScreen() {
 
   const images = getDisplayImages(variant, family);
 
-  const handleAdd = () => {
-    const subtitle = subtitleParts.join(' • ');
-    addToCart({
-      variantId: variant.id,
-      familyId: family.id,
-      titleSnapshot: subtitle ? `${title} • ${subtitle}` : title,
-      optionsSnapshot: variant.options,
-      priceSnapshot: variant.price,
-      image: images[0] || '',
-    });
-    haptic('add');
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
+  const subtitle = subtitleParts.join(' • ');
+  const cartItem = {
+    variantId: variant.id,
+    familyId: family.id,
+    titleSnapshot: subtitle ? `${title} • ${subtitle}` : title,
+    optionsSnapshot: variant.options,
+    priceSnapshot: variant.price,
+    image: images[0] || '',
   };
 
-  const outOfStock = !variant.in_stock;
-
   return (
-    <div className="page detail-page">
+    <div className={`page detail-page${hasNativeMainButton() ? '' : ' detail-page--bar'}`}>
       {!nativeBack && (
         <button className="detail-back" onClick={() => navigate(-1)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -142,13 +131,7 @@ export default function SkuVariantScreen() {
 
       <p className="detail-disclaimer">*Цена и наличие могут меняться</p>
 
-      <button
-        className={`btn btn-primary btn-block detail-add${added ? ' detail-add--done' : ''}${outOfStock ? ' detail-add--out' : ''}`}
-        disabled={outOfStock}
-        onClick={handleAdd}
-      >
-        {added ? 'Добавлено ✓' : outOfStock ? 'Нет в наличии' : 'Добавить в корзину'}
-      </button>
+      <AddToCart item={cartItem} inStock={variant.in_stock} />
     </div>
   );
 }

@@ -34,6 +34,18 @@
   position: relative;
 }
 
+.cart-icon-wrap--bump {
+  animation: cart-bump 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes cart-bump {
+  30% { transform: translateY(-4px) scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cart-icon-wrap--bump { animation: none; }
+}
+
 .cart-badge {
   position: absolute;
   top: -6px;

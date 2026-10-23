@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
-import { useCartStore } from '../store/cartStore';
 import { useConfigurator } from '../hooks/useConfigurator';
 import OptionSelector from '../components/OptionSelector';
+import AddToCart from '../components/AddToCart';
 import { DetailSkeleton } from '../components/Skeleton';
 import { formatStorage } from '../domain/variantFormat';
-import { hasNativeBackButton } from '../telegram/telegramWebApp';
-import { haptic } from '../telegram/telegramWebApp';
+import { hasNativeBackButton, hasNativeMainButton, haptic } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
 
 // Как показывать значения опций: «1024» → «1 ТБ»
@@ -31,8 +30,6 @@ export default function ProductDetailScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, load } = useCatalogStore();
-  const addToCart = useCartStore((s) => s.add);
-  const [added, setAdded] = useState(false);
 
   useEffect(() => { load(); }, [load]);
 
@@ -59,25 +56,17 @@ export default function ProductDetailScreen() {
   if (loading) return <DetailSkeleton />;
   if (!family) return <div className="page"><p className="catalog-empty">Товар не найден</p></div>;
 
-  const outOfStock = resolvedVariant && !resolvedVariant.in_stock;
-
-  const handleAddToCart = () => {
-    if (!resolvedVariant || !resolvedVariant.in_stock || !family) return;
-    addToCart({
-      variantId: resolvedVariant.id,
-      familyId: family.id,
-      titleSnapshot: family.title,
-      optionsSnapshot: resolvedVariant.options,
-      priceSnapshot: resolvedVariant.price,
-      image: displayImages[0] || family?.images[0] || '',
-    });
-    haptic('add');
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
-  };
+  const cartItem = resolvedVariant ? {
+    variantId: resolvedVariant.id,
+    familyId: family.id,
+    titleSnapshot: family.title,
+    optionsSnapshot: resolvedVariant.options,
+    priceSnapshot: resolvedVariant.price,
+    image: displayImages[0] || family.images[0] || '',
+  } : null;
 
   return (
-    <div className="page detail-page">
+    <div className={`page detail-page${hasNativeMainButton() ? '' : ' detail-page--bar'}`}>
       {!nativeBack && (
         <button className="detail-back" onClick={() => navigate(-1)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -157,13 +146,7 @@ export default function ProductDetailScreen() {
 
       <p className="detail-disclaimer">*Цена и наличие могут меняться</p>
 
-      <button
-        className={`btn btn-primary btn-block detail-add${added ? ' detail-add--done' : ''}${outOfStock ? ' detail-add--out' : ''}`}
-        disabled={!resolvedVariant || !resolvedVariant.in_stock}
-        onClick={handleAddToCart}
-      >
-        {added ? 'Добавлено ✓' : outOfStock ? 'Нет в наличии' : 'Добавить в корзину'}
-      </button>
+      <AddToCart item={cartItem} inStock={!!resolvedVariant?.in_stock} />
     </div>
   );
 }
