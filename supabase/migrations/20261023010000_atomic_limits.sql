@@ -5,29 +5,34 @@
 
 -- 1. Вход в админку: попытка записывается ДО проверки пароля (как неудачная),
 --    под блокировкой по адресу. После верного пароля её отмечают успешной.
-create or replace function public.admin_login_begin(p_ip text, p_window_min int, p_max_fails int)
+--    Два предела: по адресу (p_max_fails) и общий высокий потолок (p_max_global) —
+--    против перебора сразу со множества адресов. Потолок высокий, чтобы нельзя было
+--    за пару минут нарочно закрыть вход владельцу.
+create or replace function public.admin_login_begin(
+  p_ip text, p_window_min int, p_max_fails int, p_max_global int
+)
 returns bigint
 language plpgsql
 security invoker
 set search_path = ''
 as $$
 declare
-  fails int;
+  since timestamptz := now() - make_interval(mins => p_window_min);
   attempt_id bigint;
 begin
   perform pg_advisory_xact_lock(hashtextextended('admin_login:' || p_ip, 0));
-  select count(*) into fails
-  from public.admin_login_attempts
-  where ip = p_ip and ok = false and created_at > now() - make_interval(mins => p_window_min);
-  if fails >= p_max_fails then
+  if (select count(*) from public.admin_login_attempts
+      where ip = p_ip and ok = false and created_at > since) >= p_max_fails
+     or (select count(*) from public.admin_login_attempts
+      where ok = false and created_at > since) >= p_max_global then
     return null; -- лимит исчерпан
   end if;
   insert into public.admin_login_attempts (ip, ok) values (p_ip, false) returning id into attempt_id;
   return attempt_id;
 end $$;
 
-revoke all on function public.admin_login_begin(text, int, int) from public, anon, authenticated;
-grant execute on function public.admin_login_begin(text, int, int) to service_role;
+revoke all on function public.admin_login_begin(text, int, int, int) from public, anon, authenticated;
+grant execute on function public.admin_login_begin(text, int, int, int) to service_role;
 
 -- 2. Заказ: проверка лимита и запись заказа — под блокировкой по Telegram-пользователю.
 create or replace function public.create_order_limited(

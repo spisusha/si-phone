@@ -2,14 +2,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
 import { signAdminToken } from '../_shared/adminAuth.ts';
 
-// Ограничение подбора пароля: не больше 5 неудачных попыток с одного адреса за 15 минут
-// и пауза после каждой ошибки. Общей блокировки на всех нет — иначе злоумышленник
-// мог бы нарочно ошибаться и не пускать в админку самого владельца.
+// Ограничение подбора пароля за 15 минут:
+// - не больше 5 ошибок с одного адреса (IPv6 — с одного блока /64);
+// - общий потолок 300 ошибок — против перебора сразу со множества адресов. Он высокий,
+//   чтобы злоумышленник не мог за минуту нарочно закрыть вход самому владельцу;
+// - пауза 1,5 с после каждой ошибки.
+// Даже при потолке это ~29 тыс. попыток в сутки — для случайного пароля от 16 символов
+// подбор нереален. Поэтому слабый пароль (короткий или только цифры) не принимаем вовсе.
 const WINDOW_MIN = 15;
 const MAX_FAILS_PER_IP = 5;
+const MAX_FAILS_GLOBAL = 300;
 const FAIL_DELAY_MS = 1500;
-// 6-значный PIN подбирается перебором — требуем длинный пароль.
-const MIN_PASSWORD_LENGTH = 12;
+const MIN_PASSWORD_LENGTH = 16;
 
 const encoder = new TextEncoder();
 
@@ -26,14 +30,26 @@ async function safeEqual(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
+// IPv6: у одного абонента обычно целый блок /64 — считаем по нему,
+// иначе смена адреса внутри блока обходила бы лимит.
+function normalizeIp(ip: string): string {
+  if (!ip.includes(':')) return ip;
+  const [head, tail = ''] = ip.toLowerCase().split('%')[0].split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail ? tail.split(':') : [];
+  const full = [...h, ...Array(Math.max(0, 8 - h.length - t.length)).fill('0'), ...t];
+  return `${full.slice(0, 4).map((x) => x || '0').join(':')}::/64`;
+}
+
 // Адрес клиента — из заголовка, который ставит инфраструктура, а не браузер.
 // Левую часть x-forwarded-for клиент подделывает сам, поэтому её не берём.
-// После выкладки сверить по логам, что адрес определяется (не 'unknown').
+// После выкладки проверить: адрес определяется (не 'unknown') и cf-connecting-ip
+// нельзя подменить своим заголовком (см. DEPLOY-SECURITY.md).
 function clientIp(req: Request): string {
   const cf = req.headers.get('cf-connecting-ip')?.trim();
-  if (cf) return cf;
+  if (cf) return normalizeIp(cf);
   const chain = (req.headers.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean);
-  return chain[chain.length - 1] || 'unknown';
+  return chain.length ? normalizeIp(chain[chain.length - 1]) : 'unknown';
 }
 
 Deno.serve(withCors(async (req) => {
@@ -49,8 +65,8 @@ Deno.serve(withCors(async (req) => {
 
   try {
     const secret = Deno.env.get('ADMIN_PASSWORD') ?? '';
-    if (secret.length < MIN_PASSWORD_LENGTH) {
-      console.error('admin-login: ADMIN_PASSWORD не задан или короче 12 символов');
+    if (secret.length < MIN_PASSWORD_LENGTH || /^\d+$/.test(secret)) {
+      console.error('admin-login: ADMIN_PASSWORD не задан, короче 16 символов или из одних цифр');
       return json({ error: 'Вход в админку не настроен' }, 500);
     }
 
@@ -63,7 +79,7 @@ Deno.serve(withCors(async (req) => {
     // Попытка записывается ДО проверки пароля одной операцией в базе (с блокировкой по адресу),
     // поэтому пачка одновременных запросов не обойдёт лимит.
     const { data: attemptId, error: limitErr } = await sb.rpc('admin_login_begin', {
-      p_ip: ip, p_window_min: WINDOW_MIN, p_max_fails: MAX_FAILS_PER_IP,
+      p_ip: ip, p_window_min: WINDOW_MIN, p_max_fails: MAX_FAILS_PER_IP, p_max_global: MAX_FAILS_GLOBAL,
     });
     // Не смогли проверить лимит — не пускаем (а не «пускаем, раз проверка сломалась»).
     if (limitErr) {

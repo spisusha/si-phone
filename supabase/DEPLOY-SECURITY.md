@@ -14,7 +14,8 @@ npx supabase secrets list              # должны быть TELEGRAM_BOT_TOKE
 ```
 Новые секреты:
 ```
-npx supabase secrets set ADMIN_PASSWORD=<пароль от 12 символов>   # PIN больше не принимается
+npx supabase secrets set ADMIN_PASSWORD=<случайный пароль от 20 символов>   # меньше 16 или одни цифры — вход не откроется
+# сгенерировать: node -e "console.log(require('crypto').randomBytes(18).toString('base64url'))"
 npx supabase secrets set ALLOWED_ORIGINS=https://mini-app-andrew.vercel.app
 ```
 Сменить `ADMIN_TOKEN_SECRET` (новая случайная строка) — так старые токены админки перестанут работать.
@@ -48,3 +49,5 @@ npm run deploy
 - Чтение `orders` публичным ключом → пусто или ошибка.
 - Заказ из Telegram доходит админам, сумма в сообщении — из базы.
 - Запрос на адрес воркера без заголовка секрета → 401.
+- Вход в админку: в логах функции `admin-login` адрес клиента определяется (не `unknown`).
+  Запрос со своим заголовком `cf-connecting-ip: 1.2.3.4` не должен менять адрес в логах — иначе лимит по адресу обходится.
