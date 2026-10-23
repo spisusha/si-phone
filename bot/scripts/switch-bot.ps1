@@ -1,9 +1,19 @@
 ﻿# Переключение бота Si Phone на новый воркер si-phone-bot.
-# Запуск (из папки bot):  powershell -ExecutionPolicy Bypass -File scripts\switch-bot.ps1
+# Запуск (из папки bot):  powershell -ExecutionPolicy Bypass -File scripts\switch-bot.ps1 [-Admins 123,456]
 # Ключи берутся из .dev.vars и сразу уходят в секреты Cloudflare — на экран не выводятся.
+param([string]$Admins = '')
 
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
+
+# npm/wrangler пишут служебные строки в поток ошибок; старый PowerShell 5.1 при 'Stop'
+# принимает их за ошибку и останавливается. Поэтому внешние команды — через cmd, вывод — строкой.
+function Run-Native([string]$cmd) {
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try { $out = (cmd /c "$cmd 2>&1" | Out-String) } finally { $ErrorActionPreference = $prev }
+  return @{ Out = $out; Code = $LASTEXITCODE }
+}
 
 function Step($t) { Write-Host ""; Write-Host "== $t" -ForegroundColor Cyan }
 
@@ -21,13 +31,15 @@ $token = $vars['TELEGRAM_BOT_TOKEN']
 
 # 2. Админы
 Step "2/6 chat_id админов"
-$admins = (Read-Host "Вставь chat_id админов через запятую, без пробелов").Trim()
+$admins = $Admins.Trim()
+if (-not $admins) { $admins = (Read-Host "Вставь chat_id админов через запятую, без пробелов").Trim() }
 if ($admins -notmatch '^-?\d+(,-?\d+)*$') { throw "Формат: 123,456,789" }
 
 # 3. Выкладка воркера
 Step "3/6 Выкладываю воркер si-phone-bot"
-$out = (npx wrangler deploy 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0) { Write-Host $out; throw "wrangler deploy не прошёл" }
+$r = Run-Native 'npx wrangler deploy'
+$out = $r.Out
+if ($r.Code -ne 0) { Write-Host $out; throw "wrangler deploy не прошёл" }
 $m = [regex]::Match($out, 'https://si-phone-bot\.[a-z0-9-]+\.workers\.dev')
 if (-not $m.Success) { Write-Host $out; throw "Не нашёл адрес воркера в выводе" }
 $url = $m.Value
@@ -46,8 +58,8 @@ try {
     WEBHOOK_SECRET     = $webhookSecret
     ADMIN_CHAT_ID      = $admins
   } | ConvertTo-Json | Set-Content -Path $tmp -Encoding ASCII
-  npx wrangler secret bulk $tmp | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw "wrangler secret bulk не прошёл" }
+  $r = Run-Native ('npx wrangler secret bulk "' + $tmp + '"')
+  if ($r.Code -ne 0) { Write-Host ($r.Out -replace '[A-Za-z0-9_-]{30,}', '<скрыто>'); throw "wrangler secret bulk не прошёл" }
 } finally {
   if (Test-Path $tmp) { Remove-Item $tmp -Force }
 }
