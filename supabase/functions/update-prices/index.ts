@@ -1,5 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { corsHeaders } from '../_shared/cors.ts';
+import { corsHeaders, withCors } from '../_shared/cors.ts';
+import { verifyAdminToken, unauthorized } from '../_shared/adminAuth.ts';
+
+// Защита от слишком больших запросов (в прайсе поставщика — сотни-тысячи строк).
+const MAX_ITEMS = 10000;
 
 interface PriceItem { xmlid: string; price: number; description: string; categoryGuess: string }
 interface RequestBody { items: PriceItem[]; mode: 'prices_only' | 'sync_stock'; requestId?: string }
@@ -349,8 +353,11 @@ function ms(start: number) { return Date.now() - start; }
 // ══════════════════════════════════════════════════════════════════════
 // ── HANDLER ─────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  // Цены и наличие меняет только админ: без этой проверки любой с публичным ключом
+  // мог переписать прайс или снять весь каталог с продажи.
+  if (!(await verifyAdminToken(req))) return unauthorized();
   const T0 = Date.now();
 
   try {
@@ -360,6 +367,9 @@ Deno.serve(async (req) => {
     const requestId = body.requestId || crypto.randomUUID();
     const L = (phase: string, msg: string) => console.log(`[${requestId.slice(0,8)}] ${phase}: ${msg}`);
 
+    if (Array.isArray(items) && items.length > MAX_ITEMS) {
+      return new Response(JSON.stringify({ ok: false, error: `Too many items (max ${MAX_ITEMS})`, requestId }), { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     if (!items || !Array.isArray(items) || items.length === 0) {
       return new Response(JSON.stringify({ ok: false, error: 'No items provided', requestId }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
@@ -1175,4 +1185,4 @@ Deno.serve(async (req) => {
     console.error(`[update-prices] FATAL: ${(err as Error).message}`);
     return new Response(JSON.stringify({ ok: false, error: (err as Error).message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
-});
+}));

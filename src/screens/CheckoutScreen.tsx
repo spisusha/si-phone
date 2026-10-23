@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api/orderRepo';
 import { cartItemSubtitle } from '../domain/variantFormat';
-import { getTgUser, getGuestId } from '../telegram/telegramWebApp';
+import { getTgUser } from '../telegram/telegramWebApp';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
 import './CheckoutScreen.css';
 
@@ -38,30 +38,36 @@ export default function CheckoutScreen() {
     setError('');
     setSubmitting(true);
 
-    const tgUser = getTgUser();
-    const payload: OrderPayload = {
-      items,
-      totals: total(),
+    const result = await createOrder({
+      items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
       deliveryMethod: delivery,
       address: delivery === 'delivery' ? address.trim() : undefined,
       phone: phone.trim() || undefined,
       paymentMethod: payment,
-      tgUser: tgUser || null,
-      guestId: tgUser ? undefined : getGuestId(),
-      createdAt: new Date().toISOString(),
-    };
-
-    const orderId = await createOrder(payload);
+    });
     setSubmitting(false);
 
-    if (orderId) {
-      const resultState = { payload, orderId };
-      sessionStorage.setItem('lastOrder', JSON.stringify(resultState));
-      clear();
-      navigate('/result', { state: resultState, replace: true });
-    } else {
-      setError('Ошибка при оформлении. Попробуйте ещё раз.');
+    if (!result.ok) {
+      setError(result.error);
+      return;
     }
+
+    // На экране заказа — цены и сумма, которые посчитал сервер (total -1 — демо-режим без базы).
+    const serverPrice = new Map(result.items.map((l) => [l.variantId, l.price]));
+    const payload: OrderPayload = {
+      items: items.map((i) => ({ ...i, priceSnapshot: serverPrice.get(i.variantId) ?? i.priceSnapshot })),
+      totals: result.total >= 0 ? result.total : total(),
+      deliveryMethod: delivery,
+      address: delivery === 'delivery' ? address.trim() : undefined,
+      phone: phone.trim() || undefined,
+      paymentMethod: payment,
+      tgUser: getTgUser(),
+      createdAt: new Date().toISOString(),
+    };
+    const resultState = { payload, orderId: result.orderId };
+    sessionStorage.setItem('lastOrder', JSON.stringify(resultState));
+    clear();
+    navigate('/result', { state: resultState, replace: true });
   };
 
   return (

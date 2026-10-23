@@ -1,6 +1,11 @@
 // JWT signing & verification using built-in Web Crypto API — no external deps
 
+import { corsHeaders } from './cors.ts';
+
 const encoder = new TextEncoder();
+
+// Срок жизни токена админа. Отозвать все токены сразу — сменить секрет ADMIN_TOKEN_SECRET.
+const TOKEN_TTL_SEC = 12 * 60 * 60;
 
 async function getKey(): Promise<CryptoKey> {
   const secret = Deno.env.get('ADMIN_TOKEN_SECRET');
@@ -33,7 +38,7 @@ function b64urlDecode(str: string): string {
 
 export async function signAdminToken(): Promise<{ token: string; expiresAt: string }> {
   const now = Math.floor(Date.now() / 1000);
-  const exp = now + 24 * 60 * 60;
+  const exp = now + TOKEN_TTL_SEC;
 
   const header = b64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const payload = b64urlEncode(JSON.stringify({ role: 'admin', iat: now, exp }));
@@ -65,8 +70,13 @@ export async function verifyAdminToken(req: Request): Promise<boolean> {
     const valid = await crypto.subtle.verify('HMAC', key, sigBytes, encoder.encode(data));
     if (!valid) return false;
 
+    const header = JSON.parse(b64urlDecode(parts[0]));
+    if (header.alg !== 'HS256') return false;
+
     const payload = JSON.parse(b64urlDecode(parts[1]));
-    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return false;
+    // exp и роль обязательны: токен без срока или без роли не принимаем.
+    if (payload.role !== 'admin') return false;
+    if (typeof payload.exp !== 'number' || payload.exp < Math.floor(Date.now() / 1000)) return false;
 
     return true;
   } catch {
@@ -77,11 +87,6 @@ export async function verifyAdminToken(req: Request): Promise<boolean> {
 export function unauthorized(): Response {
   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
     status: 401,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
 }

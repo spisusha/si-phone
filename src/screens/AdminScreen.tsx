@@ -41,6 +41,22 @@ async function callFn<T = unknown>(name: string, body: unknown, token: string): 
   return json as T;
 }
 
+// Загрузка фото: сервер проверяет токен админа и выдаёт одноразовую ссылку на один файл.
+// Напрямую писать в хранилище публичным ключом нельзя (политика закрыта).
+async function uploadPhoto(
+  token: string,
+  file: File,
+  target: { folder: string; entityId: string; colorSlug?: string },
+): Promise<string> {
+  const signed = await callFn<{ path: string; token: string; publicUrl: string }>(
+    'media-sign-upload', { ...target, fileName: file.name }, token,
+  );
+  const { error } = await supabase!.storage.from('products')
+    .uploadToSignedUrl(signed.path, signed.token, file, { contentType: file.type });
+  if (error) throw new Error(`Upload ${file.name}: ${error.message}`);
+  return signed.publicUrl;
+}
+
 // ── Login screen ─────────────────────────────────────────────────────
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -77,7 +93,8 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
         <input
           className="media-input"
           type="password"
-          placeholder="PIN"
+          placeholder="Пароль"
+          autoComplete="current-password"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
           autoFocus
@@ -666,12 +683,7 @@ function SkuMediaSection({ category, storagePath, label, filterMax }: {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setProgress(`Загрузка ${i + 1}/${files.length}: ${file.name}`);
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `${storagePath}/${variantId}/${Date.now()}-${safeName}`;
-        const { error: upErr } = await supabase.storage.from('products').upload(path, file, { upsert: true });
-        if (upErr) throw new Error(`Upload ${file.name}: ${upErr.message}`);
-        const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(path);
-        urls.push(publicUrl);
+        urls.push(await uploadPhoto(auth.token, file, { folder: storagePath, entityId: variantId }));
       }
       setProgress('Применение к варианту...');
       await callFn<{ ok: boolean; savedUrls: string[]; finalCount: number }>(
@@ -870,12 +882,7 @@ function ColorMediaSection({ category, storagePath, label, filterTitle }: {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setProgress(`Загрузка ${i + 1}/${files.length}: ${file.name}`);
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        const path = `${storagePath}/${familyId}/${slug}/${Date.now()}-${safeName}`;
-        const { error: upErr } = await supabase.storage.from('products').upload(path, file, { upsert: true });
-        if (upErr) throw new Error(`Upload ${file.name}: ${upErr.message}`);
-        const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(path);
-        urls.push(publicUrl);
+        urls.push(await uploadPhoto(auth.token, file, { folder: storagePath, entityId: familyId, colorSlug: slug }));
       }
       setProgress('Сохранение...');
       const result = await callFn<{ ok: boolean; savedUrls: string[] }>(

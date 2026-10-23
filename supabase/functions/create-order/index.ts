@@ -1,31 +1,42 @@
-import { corsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders, withCors } from '../_shared/cors.ts';
+import { verifyInitData, type TgUser } from '../_shared/telegramInitData.ts';
 
-interface CartItem {
-  titleSnapshot: string;
-  optionsSnapshot: Record<string, string>;
-  priceSnapshot: number;
-  image: string;
+// Всё, что приходит из мини-аппа, может быть подделано. Поэтому сервер:
+// - узнаёт покупателя только по проверенной initData Telegram;
+// - берёт цены и наличие из базы и сам считает сумму (цены с телефона не принимаются);
+// - ограничивает частоту заказов, чтобы нельзя было завалить админов спамом.
+
+const INIT_DATA_MAX_AGE_SEC = 24 * 60 * 60; // initData не обновляется, пока мини-апп открыт
+const MAX_POSITIONS = 20;
+const MAX_QTY = 10;
+const LIMIT_10_MIN = 3;
+const LIMIT_DAY = 20;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PHONE_RE = /^[+\d\s()-]{5,32}$/;
+
+interface RequestBody {
+  initData?: string;
+  items?: { variantId?: string; qty?: number }[];
+  deliveryMethod?: string;
+  address?: string;
+  phone?: string;
+  paymentMethod?: string;
+}
+
+interface OrderLine {
+  variantId: string;
+  title: string;
+  options: string;
+  price: number;
   qty: number;
 }
 
-interface TgUser {
-  id: number;
-  first_name: string;
-  last_name?: string;
-  username?: string;
-}
-
-interface OrderPayload {
-  items: CartItem[];
-  totals: number;
+interface Contacts {
   deliveryMethod: 'pickup' | 'delivery';
-  address?: string;
-  phone?: string;
   paymentMethod: 'cash' | 'online';
-  tgUser?: TgUser | null;
-  guestId?: string;
-  createdAt: string;
+  address: string;
+  phone: string;
 }
 
 function escapeHtml(s: string): string {
@@ -36,59 +47,52 @@ function formatPrice(n: number): string {
   return n.toLocaleString('ru-RU');
 }
 
-function buildMessage(orderId: string, p: OrderPayload): string {
-  const lines: string[] = [];
-  lines.push(`🧾 <b>Заказ:</b> <code>${escapeHtml(orderId)}</code>`);
-
-  const tg = p.tgUser;
-  if (tg) {
-    const name = [tg.first_name, tg.last_name].filter(Boolean).join(' ');
-    const usernameStr = tg.username ? ` (@${escapeHtml(tg.username)})` : '';
-    lines.push(`👤 <b>Клиент:</b> ${escapeHtml(name)}${usernameStr}`);
-    lines.push(`🆔 <b>Telegram ID:</b> <code>${tg.id}</code>`);
-  } else if (p.guestId) {
-    lines.push(`👤 <b>Клиент:</b> Гость`);
-    lines.push(`🆔 <b>Guest ID:</b> <code>${escapeHtml(p.guestId)}</code>`);
-  }
-
-  lines.push('');
-  lines.push('📦 <b>Позиции:</b>');
-  for (const item of p.items) {
-    const opts = Object.values(item.optionsSnapshot || {}).filter(Boolean).join(' · ');
-    const lineTotal = item.priceSnapshot * item.qty;
-    const optStr = opts ? ` (${escapeHtml(opts)})` : '';
-    lines.push(
-      `  • ${escapeHtml(item.titleSnapshot)}${optStr} ×${item.qty} — ${formatPrice(lineTotal)} ₽`,
-    );
-  }
-
-  lines.push('');
-  lines.push(`💰 <b>Итого:</b> ${formatPrice(p.totals)} ₽`);
-
-  const deliveryLabel = p.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка';
-  lines.push(`🚚 <b>Получение:</b> ${deliveryLabel}`);
-
-  if (p.deliveryMethod === 'delivery' && p.address) {
-    lines.push(`📍 <b>Адрес:</b> ${escapeHtml(p.address)}`);
-  }
-
-  if (p.phone) {
-    lines.push(`📱 <b>Телефон:</b> ${escapeHtml(p.phone)}`);
-  }
-
-  const paymentLabel = p.paymentMethod === 'cash' ? 'Наличными' : 'Перевод';
-  lines.push(`💳 <b>Оплата:</b> ${paymentLabel}`);
-
-  if (p.createdAt) {
-    const d = new Date(p.createdAt);
-    const dateStr = d.toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' });
-    lines.push(`🕒 <b>Время:</b> ${dateStr}`);
-  }
-
-  return lines.join('\n');
+function formatStorage(gb: unknown): string {
+  const n = Number(gb);
+  return n >= 1024 ? `${n / 1024} ТБ` : `${n} ГБ`;
 }
 
-Deno.serve(async (req) => {
+// Та же логика, что в src/domain/variantFormat.ts: только понятные покупателю поля.
+function describeOptions(o: Record<string, unknown>): string {
+  const parts: string[] = [];
+  if (o.chip) parts.push(String(o.chip));
+  if (o.memStorage) parts.push(String(o.memStorage));
+  if (o.storage) parts.push(formatStorage(o.storage));
+  const color = o.colorLabel || o.color;
+  if (color) parts.push(String(color));
+  if (o.simType) parts.push(String(o.simType));
+  if (o.connectivity) parts.push(String(o.connectivity));
+  if (o.size) parts.push(String(o.size));
+  if (o.ruKeyboard && String(o.ruKeyboard) !== 'false') parts.push('RU');
+  return parts.join(' · ');
+}
+
+function buildMessage(orderId: string, user: TgUser, lines: OrderLine[], total: number, c: Contacts): string {
+  const out: string[] = [];
+  out.push(`🧾 <b>Заказ:</b> <code>${escapeHtml(orderId.slice(0, 8).toUpperCase())}</code>`);
+  const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени';
+  const username = user.username ? ` (@${escapeHtml(user.username)})` : '';
+  out.push(`👤 <b>Клиент:</b> ${escapeHtml(name)}${username}`);
+  out.push(`🆔 <b>Telegram ID:</b> <code>${user.id}</code>`);
+  out.push('');
+  out.push('📦 <b>Позиции:</b>');
+  for (const l of lines) {
+    const opts = l.options ? ` (${escapeHtml(l.options)})` : '';
+    out.push(`  • ${escapeHtml(l.title)}${opts} ×${l.qty} — ${formatPrice(l.price * l.qty)} ₽`);
+  }
+  out.push('');
+  out.push(`💰 <b>Итого:</b> ${formatPrice(total)} ₽ (цены из базы на момент заказа)`);
+  out.push(`🚚 <b>Получение:</b> ${c.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}`);
+  if (c.deliveryMethod === 'delivery') out.push(`📍 <b>Адрес:</b> ${escapeHtml(c.address)}`);
+  if (c.phone) out.push(`📱 <b>Телефон:</b> ${escapeHtml(c.phone)}`);
+  out.push(`💳 <b>Оплата:</b> ${c.paymentMethod === 'cash' ? 'Наличными' : 'Перевод'}`);
+  out.push(`🕒 <b>Время:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}`);
+  // Telegram не принимает сообщения длиннее 4096 символов
+  const text = out.join('\n');
+  return text.length > 4000 ? text.slice(0, 3990) + '\n…' : text;
+}
+
+Deno.serve(withCors(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -100,80 +104,135 @@ Deno.serve(async (req) => {
     });
 
   try {
-    const payload = (await req.json()) as OrderPayload;
-
-    if (!payload?.items?.length) {
-      return json({ error: 'Empty order' }, 400);
+    const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '';
+    if (!botToken) {
+      console.error('create-order: TELEGRAM_BOT_TOKEN не задан');
+      return json({ ok: false, error: 'Заказы временно не принимаются' }, 500);
     }
 
-    const orderId = crypto.randomUUID();
+    const body = (await req.json().catch(() => ({}))) as RequestBody;
 
-    /* ── try to save order to DB ── */
-    let dbSaved = false;
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const sb = createClient(supabaseUrl, serviceRoleKey);
+    /* ── 1. кто покупатель: только проверенная initData ── */
+    const user = await verifyInitData(String(body.initData ?? ''), botToken, INIT_DATA_MAX_AGE_SEC);
+    if (!user) {
+      return json({ ok: false, code: 'not_telegram', error: 'Откройте магазин через Telegram, чтобы оформить заказ' }, 401);
+    }
 
-      const { error: insertErr } = await sb
-        .from('orders')
-        .insert({ id: orderId, payload, created_at: payload.createdAt });
-
-      if (insertErr) {
-        console.error('Insert order error (non-fatal):', insertErr.message);
-      } else {
-        dbSaved = true;
+    /* ── 2. что заказали: только id и количество ── */
+    const qtyById = new Map<string, number>();
+    for (const it of Array.isArray(body.items) ? body.items : []) {
+      const id = String(it?.variantId ?? '');
+      const qty = Number(it?.qty);
+      if (!UUID_RE.test(id) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) {
+        return json({ ok: false, error: 'Некорректная корзина' }, 400);
       }
-    } catch (dbErr) {
-      console.error('DB save failed (non-fatal):', dbErr);
+      qtyById.set(id, Math.min(MAX_QTY, (qtyById.get(id) ?? 0) + qty));
+    }
+    if (qtyById.size === 0 || qtyById.size > MAX_POSITIONS) {
+      return json({ ok: false, error: 'Некорректная корзина' }, 400);
     }
 
-    /* ── send telegram ── */
-    const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
-    const chatIdsRaw = Deno.env.get('TELEGRAM_ADMIN_CHAT_IDS') || '';
-    const chatIds = chatIdsRaw.split(',').map((s) => s.trim()).filter(Boolean);
+    /* ── 3. доставка и контакты ── */
+    const deliveryMethod = body.deliveryMethod === 'delivery' ? 'delivery' : body.deliveryMethod === 'pickup' ? 'pickup' : null;
+    const paymentMethod = body.paymentMethod === 'online' ? 'online' : body.paymentMethod === 'cash' ? 'cash' : null;
+    const address = String(body.address ?? '').trim().slice(0, 300);
+    const phone = String(body.phone ?? '').trim();
+    if (!deliveryMethod || !paymentMethod) return json({ ok: false, error: 'Выберите способ получения и оплаты' }, 400);
+    if (deliveryMethod === 'delivery' && address.length < 5) return json({ ok: false, error: 'Укажите адрес доставки' }, 400);
+    if (phone && !PHONE_RE.test(phone)) return json({ ok: false, error: 'Проверьте номер телефона' }, 400);
 
+    const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+
+    /* ── 4. лимит частоты (если проверка не сработала — заказ не принимаем) ── */
+    const countSince = async (ms: number) => {
+      const { count, error } = await sb.from('orders').select('id', { count: 'exact', head: true })
+        .eq('tg_user_id', user.id).gte('created_at', new Date(Date.now() - ms).toISOString());
+      if (error) throw new Error(`rate limit check: ${error.message}`);
+      return count ?? 0;
+    };
+    if ((await countSince(10 * 60_000)) >= LIMIT_10_MIN || (await countSince(24 * 3600_000)) >= LIMIT_DAY) {
+      return json({ ok: false, code: 'rate_limited', error: 'Слишком много заказов подряд. Напишите менеджеру или попробуйте позже' }, 429);
+    }
+
+    /* ── 5. цены и наличие — из базы ── */
+    const ids = [...qtyById.keys()];
+    const { data: variants, error: vErr } = await sb.from('variants')
+      .select('id, family_id, options, price, in_stock').in('id', ids);
+    if (vErr) throw new Error(`variants: ${vErr.message}`);
+    const familyIds = [...new Set((variants ?? []).map((v) => v.family_id))];
+    const { data: families, error: fErr } = await sb.from('product_families')
+      .select('id, title, category').in('id', familyIds);
+    if (fErr) throw new Error(`families: ${fErr.message}`);
+    const familyById = new Map((families ?? []).map((f) => [f.id, f]));
+
+    const lines: OrderLine[] = [];
+    for (const id of ids) {
+      const v = variants?.find((x) => x.id === id);
+      const fam = v ? familyById.get(v.family_id) : undefined;
+      const price = Number(v?.price);
+      if (!v || !fam || !v.in_stock || !(price > 0)) {
+        return json({ ok: false, code: 'stale_cart', error: 'Часть товаров закончилась или изменилась. Обновите корзину' }, 409);
+      }
+      const opts = (v.options ?? {}) as Record<string, unknown>;
+      const isWatch = String(fam.category).toLowerCase() === 'watch';
+      lines.push({
+        variantId: id,
+        title: isWatch && opts.supplierTitle ? String(opts.supplierTitle) : String(fam.title),
+        options: isWatch ? '' : describeOptions(opts),
+        price,
+        qty: qtyById.get(id)!,
+      });
+    }
+    const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+
+    /* ── 6. сохранить и отправить ── */
+    const orderId = crypto.randomUUID();
+    const contacts: Contacts = { deliveryMethod, paymentMethod, address, phone };
+    const payload = {
+      items: lines,
+      total,
+      deliveryMethod,
+      address: deliveryMethod === 'delivery' ? address : null,
+      phone: phone || null,
+      paymentMethod,
+      tgUser: { id: user.id, first_name: user.first_name, last_name: user.last_name, username: user.username },
+    };
+
+    const { error: insertErr } = await sb.from('orders')
+      .insert({ id: orderId, payload, tg_user_id: user.id, total });
+    if (insertErr) console.error('create-order: insert failed', insertErr.message);
+
+    const chatIds = (Deno.env.get('TELEGRAM_ADMIN_CHAT_IDS') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const text = buildMessage(orderId, user, lines, total, contacts);
     let tgSent = 0;
-    let tgFailed = 0;
-
-    if (botToken && chatIds.length > 0) {
-      const text = buildMessage(orderId, payload);
-      const userId = payload.tgUser?.id;
-      const replyMarkup = userId
-        ? { inline_keyboard: [[{ text: '✉️ Написать клиенту', url: `tg://user?id=${userId}` }]] }
-        : undefined;
-
-      for (const chatId of chatIds) {
-        try {
-          const body: Record<string, unknown> = {
+    for (const chatId of chatIds) {
+      try {
+        const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             chat_id: chatId,
             text,
             parse_mode: 'HTML',
             disable_web_page_preview: true,
-          };
-          if (replyMarkup) body.reply_markup = replyMarkup;
-
-          const resp = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body),
-          });
-          const result = await resp.json();
-          if (result.ok) tgSent++;
-          else {
-            console.error(`TG fail ${chatId}:`, result);
-            tgFailed++;
-          }
-        } catch (err) {
-          console.error(`TG error ${chatId}:`, err);
-          tgFailed++;
-        }
+            reply_markup: { inline_keyboard: [[{ text: '✉️ Написать клиенту', url: `tg://user?id=${user.id}` }]] },
+          }),
+        });
+        const result = await resp.json();
+        if (result.ok) tgSent++;
+        else console.error('create-order: TG fail', chatId, result.description);
+      } catch (err) {
+        console.error('create-order: TG error', chatId, err);
       }
     }
 
-    return json({ ok: true, orderId, dbSaved, tgSent, tgFailed });
+    // Заказ считается принятым, только если он сохранён или дошёл до админов.
+    if (insertErr && tgSent === 0) {
+      return json({ ok: false, error: 'Не удалось оформить заказ. Попробуйте ещё раз или напишите менеджеру' }, 500);
+    }
+    return json({ ok: true, orderId, total, items: lines });
   } catch (err) {
     console.error('create-order error:', err);
-    return json({ error: (err as Error).message }, 500);
+    return json({ ok: false, error: 'Не удалось оформить заказ. Попробуйте ещё раз' }, 500);
   }
-});
+}));

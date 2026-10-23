@@ -1,39 +1,56 @@
 import { supabase } from './supabaseClient';
-import type { OrderPayload } from '../domain/types';
+import { getInitData } from '../telegram/telegramWebApp';
+import type { DeliveryMethod, PaymentMethod } from '../domain/types';
 
-interface CreateOrderResult {
-  ok: boolean;
-  orderId: string;
-  tgSent: number;
-  tgFailed: number;
-  error?: string;
+// С клиента уходит только «что хочу»: id варианта и количество.
+// Цену и сумму считает сервер по базе — цены из корзины он не принимает.
+export interface CreateOrderRequest {
+  items: { variantId: string; qty: number }[];
+  deliveryMethod: DeliveryMethod;
+  address?: string;
+  phone?: string;
+  paymentMethod: PaymentMethod;
 }
 
-export async function createOrder(payload: OrderPayload): Promise<string | null> {
+export interface ServerOrderLine {
+  variantId: string;
+  title: string;
+  options: string;
+  price: number;
+  qty: number;
+}
+
+export type CreateOrderResult =
+  | { ok: true; orderId: string; total: number; items: ServerOrderLine[] }
+  | { ok: false; error: string };
+
+const NOT_IN_TELEGRAM = 'Откройте магазин через Telegram, чтобы оформить заказ';
+const GENERIC_ERROR = 'Ошибка при оформлении. Попробуйте ещё раз.';
+
+export async function createOrder(req: CreateOrderRequest): Promise<CreateOrderResult> {
   if (!supabase) {
-    console.log('[mock] Order created:', payload);
-    return crypto.randomUUID();
+    console.log('[mock] Order created:', req);
+    return { ok: true, orderId: crypto.randomUUID(), total: -1, items: [] };
   }
+
+  const initData = getInitData();
+  if (!initData) return { ok: false, error: NOT_IN_TELEGRAM };
 
   try {
     const { data, error } = await supabase.functions.invoke<CreateOrderResult>('create-order', {
-      body: payload,
+      body: { ...req, initData },
     });
 
     if (error) {
-      console.error('createOrder invoke error:', error);
-      return null;
+      // Сервер отвечает понятным текстом ошибки (закончился товар, лимит заказов и т.п.)
+      const ctx = (error as { context?: Response }).context;
+      const body = ctx ? await ctx.json().catch(() => null) : null;
+      return { ok: false, error: body?.error || GENERIC_ERROR };
     }
-
-    if (!data?.ok) {
-      console.error('createOrder server error:', data?.error);
-      return null;
-    }
-
-    console.log(`Order created: ${data.orderId}, TG sent: ${data.tgSent}, failed: ${data.tgFailed}`);
-    return data.orderId;
+    if (!data?.ok) return { ok: false, error: (data as { error?: string })?.error || GENERIC_ERROR };
+    return data;
   } catch (err) {
     console.error('createOrder failed:', err);
-    return null;
+    return { ok: false, error: GENERIC_ERROR };
   }
 }

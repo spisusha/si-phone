@@ -41,18 +41,12 @@ export function getTgUser(): TgUser | null {
   return getWebApp()?.initDataUnsafe?.user ?? null;
 }
 
-export function isTelegramEnv(): boolean {
-  return !!getWebApp()?.initData;
+// Сырая подписанная строка Telegram — сервер проверяет её подпись.
+// initDataUnsafe годится только для показа имени на экране.
+export function getInitData(): string {
+  return getWebApp()?.initData ?? '';
 }
 
-let _guestId: string | null = null;
-export function getGuestId(): string {
-  if (!_guestId) {
-    _guestId = localStorage.getItem('guest_id');
-    if (!_guestId) {
-      _guestId = crypto.randomUUID();
-      localStorage.setItem('guest_id', _guestId);
-    }
-  }
-  return _guestId;
+export function isTelegramEnv(): boolean {
+  return !!getWebApp()?.initData;
 }
