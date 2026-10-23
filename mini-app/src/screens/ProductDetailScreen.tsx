@@ -6,7 +6,7 @@ import OptionSelector from '../components/OptionSelector';
 import AddToCart from '../components/AddToCart';
 import { DetailSkeleton } from '../components/Skeleton';
 import { formatStorage } from '../domain/variantFormat';
-import { hasNativeBackButton, hasNativeMainButton, haptic } from '../telegram/telegramWebApp';
+import { hasNativeBackButton, haptic } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
 import { CatalogFailed, NotFound } from '../components/EmptyState';
 
@@ -68,7 +68,7 @@ export default function ProductDetailScreen() {
   } : null;
 
   return (
-    <div className={`page detail-page${hasNativeMainButton() ? '' : ' detail-page--bar'}`}>
+    <div className="page detail-page page--action-bar">
       {!nativeBack && (
         <button className="detail-back" onClick={() => navigate(-1)}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

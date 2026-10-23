@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getTgUser } from '../telegram/telegramWebApp';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
 import { IconPhone, IconPin, IconTelegram } from '../components/icons';
@@ -37,13 +37,7 @@ export default function ProfileScreen() {
 
       <div className="profile-card">
         <div className="profile-avatar">
-          {tgUser?.photo_url ? (
-            <img className="profile-avatar__img" src={tgUser.photo_url} alt="" />
-          ) : (
-            <span className="profile-avatar__letter">
-              {firstName[0].toUpperCase()}
-            </span>
-          )}
+          <TgAvatar url={tgUser?.photo_url} letter={firstName[0].toUpperCase()} />
         </div>
         <div className="profile-info">
           <h2 className="profile-name">
@@ -109,4 +103,35 @@ export default function ProfileScreen() {
       <p className="profile-version">Версия 1.0.0</p>
     </div>
   );
+}
+
+/**
+ * Фото профиля из Telegram. Грузим только после полной загрузки страницы и ждём не дольше 5 с:
+ * если сервер Telegram не отдаёт фото (настройки приватности, сеть), картинка не висит
+ * «вечной загрузкой» (на iPhone застывала полоска загрузки) — показываем первую букву имени.
+ */
+function TgAvatar({ url, letter }: { url?: string; letter: string }) {
+  const [loaded, setLoaded] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+    let alive = true;
+    const img = new Image();
+    img.referrerPolicy = 'no-referrer';
+    const timer = window.setTimeout(() => { img.src = ''; }, 5000);
+    img.onload = () => { window.clearTimeout(timer); if (alive && img.naturalWidth > 0) setLoaded(url); };
+    img.onerror = () => window.clearTimeout(timer);
+    const start = () => { img.src = url; };
+    if (document.readyState === 'complete') start();
+    else window.addEventListener('load', start, { once: true });
+    return () => {
+      alive = false;
+      window.clearTimeout(timer);
+      window.removeEventListener('load', start);
+    };
+  }, [url]);
+
+  return loaded
+    ? <img className="profile-avatar__img" src={loaded} alt="" referrerPolicy="no-referrer" />
+    : <span className="profile-avatar__letter">{letter}</span>;
 }

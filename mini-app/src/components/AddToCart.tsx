@@ -15,8 +15,7 @@ interface Props {
 
 /**
  * Кнопка «В корзину» с ценой — всегда под рукой.
- * В Telegram — большая нижняя кнопка Telegram, как в корзине и оформлении;
- * вне Telegram — такая же полоса над нижним меню.
+ * Своя полоса над нижним меню — и в Telegram, и в браузере (как в корзине и оформлении).
  * После добавления — тихо: кнопка становится «В корзине · Перейти»,
  * значок корзины в меню подпрыгивает (выбор Романа, этап 5.1).
  */
@@ -42,9 +41,9 @@ export default function AddToCart({ item, inStock }: Props) {
   if (native) return null;
 
   return (
-    <div className="atc-bar">
+    <div className="action-bar">
       <button
-        className={`btn btn-primary btn-block atc-bar__btn${inCart ? ' atc-bar__btn--go' : ''}`}
+        className={`btn btn-primary btn-block action-bar__btn${inCart ? ' action-bar__btn--go' : ''}`}
         disabled={disabled}
         onClick={onClick}
       >

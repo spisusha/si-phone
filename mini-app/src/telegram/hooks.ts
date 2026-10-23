@@ -13,13 +13,18 @@ interface MainButtonOptions {
   disabled?: boolean;
 }
 
+// Системная кнопка Telegram встаёт ПОД нашим нижним меню — Роману это показалось странным
+// (23.10.2026, проверка на iPhone). Поэтому итоговое действие — своя полоса над меню
+// (.action-bar) и в Telegram тоже. Чтобы вернуть кнопку Telegram — поставить true.
+const USE_NATIVE_MAIN_BUTTON = false;
+
 /**
  * Большая нижняя кнопка Telegram для итогового действия экрана.
  * Возвращает true, если кнопка Telegram показана — тогда своя кнопка на странице не нужна.
  * Вне Telegram (или в старой версии) возвращает false, и экран показывает свою кнопку.
  */
 export function useTelegramMainButton({ text, onClick, visible = true, progress, disabled }: MainButtonOptions): boolean {
-  const native = hasNativeMainButton();
+  const native = USE_NATIVE_MAIN_BUTTON && hasNativeMainButton();
   const clickRef = useRef(onClick);
   useEffect(() => { clickRef.current = onClick; });
 

@@ -93,7 +93,7 @@ export default function CheckoutScreen() {
   const count = items.reduce((n, i) => n + i.qty, 0);
 
   return (
-    <div className="page checkout">
+    <div className="page checkout page--action-bar">
       <h1 className="page-title">Оформление</h1>
 
       {/* Экран в стиле настроек Telegram: сгруппированные блоки и подписи над ними */}
@@ -172,13 +172,15 @@ export default function CheckoutScreen() {
       {error && <p className="checkout-error" role="alert">{error}</p>}
 
       {!nativeMain && (
-        <button
-          className="btn btn-primary btn-block"
-          onClick={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? 'Оформляем...' : 'Подтвердить заказ'}
-        </button>
+        <div className="action-bar">
+          <button
+            className="btn btn-primary btn-block action-bar__btn"
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? 'Оформляем…' : `Подтвердить заказ · ${total().toLocaleString('ru-RU')} ₽`}
+          </button>
+        </div>
       )}
     </div>
   );

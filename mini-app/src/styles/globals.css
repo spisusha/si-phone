@@ -158,3 +158,48 @@ input:focus, select:focus, textarea:focus {
   -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
   mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
 }
+
+/* ── Полоса итогового действия над нижним меню: «В корзину · цена», «Оформить · сумма» ── */
+
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--nav-height) + var(--safe-bottom));
+  z-index: 90;
+  padding: 10px 16px 8px;
+  background: var(--color-bg);
+}
+
+/* Мягкий переход от страницы к полосе вместо жёсткой линии */
+.action-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 16px;
+  background: linear-gradient(to bottom, transparent, var(--color-bg));
+  pointer-events: none;
+}
+
+.action-bar .action-bar__btn {
+  display: block;
+  max-width: 448px;
+  margin: 0 auto;
+  min-height: 48px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+}
+
+.action-bar .action-bar__btn:disabled {
+  background: var(--color-border);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+/* Место под полосу, чтобы низ страницы не прятался */
+.page.page--action-bar {
+  padding-bottom: 76px;
+}

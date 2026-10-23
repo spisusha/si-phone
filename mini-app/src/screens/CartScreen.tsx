@@ -31,7 +31,7 @@ export default function CartScreen() {
   }
 
   return (
-    <div className="page">
+    <div className="page page--action-bar">
       <h1 className="page-title">Корзина</h1>
       <div className="cart-items">
         {items.map((item) => {
@@ -77,9 +77,11 @@ export default function CartScreen() {
       </p>
 
       {!nativeMain && (
-        <button className="btn btn-primary btn-block" onClick={() => navigate('/checkout')}>
-          Оформить заказ
-        </button>
+        <div className="action-bar">
+          <button className="btn btn-primary btn-block action-bar__btn" onClick={() => navigate('/checkout')}>
+            Оформить · {sum.toLocaleString('ru-RU')} ₽
+          </button>
+        </div>
       )}
     </div>
   );
