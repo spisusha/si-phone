@@ -143,18 +143,7 @@ Deno.serve(withCors(async (req) => {
 
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
-    /* ── 4. лимит частоты (если проверка не сработала — заказ не принимаем) ── */
-    const countSince = async (ms: number) => {
-      const { count, error } = await sb.from('orders').select('id', { count: 'exact', head: true })
-        .eq('tg_user_id', user.id).gte('created_at', new Date(Date.now() - ms).toISOString());
-      if (error) throw new Error(`rate limit check: ${error.message}`);
-      return count ?? 0;
-    };
-    if ((await countSince(10 * 60_000)) >= LIMIT_10_MIN || (await countSince(24 * 3600_000)) >= LIMIT_DAY) {
-      return json({ ok: false, code: 'rate_limited', error: 'Слишком много заказов подряд. Напишите менеджеру или попробуйте позже' }, 429);
-    }
-
-    /* ── 5. цены и наличие — из базы ── */
+    /* ── 4. цены и наличие — из базы ── */
     const ids = [...qtyById.keys()];
     const { data: variants, error: vErr } = await sb.from('variants')
       .select('id, family_id, options, price, in_stock').in('id', ids);
@@ -185,7 +174,7 @@ Deno.serve(withCors(async (req) => {
     }
     const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
 
-    /* ── 6. сохранить и отправить ── */
+    /* ── 5. сохранить (с лимитом) и отправить админам ── */
     const orderId = crypto.randomUUID();
     const contacts: Contacts = { deliveryMethod, paymentMethod, address, phone };
     const payload = {
@@ -198,9 +187,19 @@ Deno.serve(withCors(async (req) => {
       tgUser: { id: user.id, first_name: user.first_name, last_name: user.last_name, username: user.username },
     };
 
-    const { error: insertErr } = await sb.from('orders')
-      .insert({ id: orderId, payload, tg_user_id: user.id, total });
-    if (insertErr) console.error('create-order: insert failed', insertErr.message);
+    // Лимит частоты и запись заказа — одной операцией в базе с блокировкой по пользователю:
+    // пачка одновременных запросов не обойдёт лимит. Не смогли проверить — заказ не принимаем.
+    const { data: accepted, error: saveErr } = await sb.rpc('create_order_limited', {
+      p_id: orderId, p_tg_user_id: user.id, p_payload: payload, p_total: total,
+      p_limit_10min: LIMIT_10_MIN, p_limit_day: LIMIT_DAY,
+    });
+    if (saveErr) {
+      console.error('create-order: save failed', saveErr.message);
+      return json({ ok: false, error: 'Не удалось оформить заказ. Попробуйте ещё раз или напишите менеджеру' }, 500);
+    }
+    if (!accepted) {
+      return json({ ok: false, code: 'rate_limited', error: 'Слишком много заказов подряд. Напишите менеджеру или попробуйте позже' }, 429);
+    }
 
     const chatIds = (Deno.env.get('TELEGRAM_ADMIN_CHAT_IDS') || '').split(',').map((s) => s.trim()).filter(Boolean);
     const text = buildMessage(orderId, user, lines, total, contacts);
@@ -226,10 +225,8 @@ Deno.serve(withCors(async (req) => {
       }
     }
 
-    // Заказ считается принятым, только если он сохранён или дошёл до админов.
-    if (insertErr && tgSent === 0) {
-      return json({ ok: false, error: 'Не удалось оформить заказ. Попробуйте ещё раз или напишите менеджеру' }, 500);
-    }
+    // Заказ уже сохранён в базе; если Telegram не ответил — админы увидят его в базе.
+    if (tgSent === 0) console.error('create-order: order saved but not delivered to Telegram', orderId);
     return json({ ok: true, orderId, total, items: lines });
   } catch (err) {
     console.error('create-order error:', err);

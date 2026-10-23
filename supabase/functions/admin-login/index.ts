@@ -2,11 +2,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
 import { signAdminToken } from '../_shared/adminAuth.ts';
 
-// Ограничение подбора пароля: не больше 5 неудачных попыток с одного адреса
-// и 30 неудачных попыток всего за 15 минут.
+// Ограничение подбора пароля: не больше 5 неудачных попыток с одного адреса за 15 минут
+// и пауза после каждой ошибки. Общей блокировки на всех нет — иначе злоумышленник
+// мог бы нарочно ошибаться и не пускать в админку самого владельца.
 const WINDOW_MIN = 15;
 const MAX_FAILS_PER_IP = 5;
-const MAX_FAILS_TOTAL = 30;
+const FAIL_DELAY_MS = 1500;
 // 6-значный PIN подбирается перебором — требуем длинный пароль.
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -25,8 +26,14 @@ async function safeEqual(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
+// Адрес клиента — из заголовка, который ставит инфраструктура, а не браузер.
+// Левую часть x-forwarded-for клиент подделывает сам, поэтому её не берём.
+// После выкладки сверить по логам, что адрес определяется (не 'unknown').
 function clientIp(req: Request): string {
-  return (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+  const cf = req.headers.get('cf-connecting-ip')?.trim();
+  if (cf) return cf;
+  const chain = (req.headers.get('x-forwarded-for') || '').split(',').map((s) => s.trim()).filter(Boolean);
+  return chain[chain.length - 1] || 'unknown';
 }
 
 Deno.serve(withCors(async (req) => {
@@ -52,20 +59,18 @@ Deno.serve(withCors(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
     const ip = clientIp(req);
-    const since = new Date(Date.now() - WINDOW_MIN * 60_000).toISOString();
 
-    const [{ count: ipFails, error: e1 }, { count: totalFails, error: e2 }] = await Promise.all([
-      sb.from('admin_login_attempts').select('id', { count: 'exact', head: true })
-        .eq('ip', ip).eq('ok', false).gte('created_at', since),
-      sb.from('admin_login_attempts').select('id', { count: 'exact', head: true })
-        .eq('ok', false).gte('created_at', since),
-    ]);
+    // Попытка записывается ДО проверки пароля одной операцией в базе (с блокировкой по адресу),
+    // поэтому пачка одновременных запросов не обойдёт лимит.
+    const { data: attemptId, error: limitErr } = await sb.rpc('admin_login_begin', {
+      p_ip: ip, p_window_min: WINDOW_MIN, p_max_fails: MAX_FAILS_PER_IP,
+    });
     // Не смогли проверить лимит — не пускаем (а не «пускаем, раз проверка сломалась»).
-    if (e1 || e2) {
-      console.error('admin-login: rate limit check failed', e1?.message ?? e2?.message);
+    if (limitErr) {
+      console.error('admin-login: rate limit check failed', limitErr.message);
       return json({ error: 'Попробуйте позже' }, 503);
     }
-    if ((ipFails ?? 0) >= MAX_FAILS_PER_IP || (totalFails ?? 0) >= MAX_FAILS_TOTAL) {
+    if (attemptId === null) {
       return json({ error: 'Слишком много попыток. Попробуйте через 15 минут' }, 429);
     }
 
@@ -73,9 +78,11 @@ Deno.serve(withCors(async (req) => {
     const input = String(body.password ?? body.pin ?? '').slice(0, 256);
     const ok = input.length > 0 && (await safeEqual(input, secret));
 
-    await sb.from('admin_login_attempts').insert({ ip, ok });
-
-    if (!ok) return json({ error: 'Неверный пароль' }, 401);
+    if (!ok) {
+      await new Promise((r) => setTimeout(r, FAIL_DELAY_MS));
+      return json({ error: 'Неверный пароль' }, 401);
+    }
+    await sb.from('admin_login_attempts').update({ ok: true }).eq('id', attemptId);
 
     const { token, expiresAt } = await signAdminToken();
     return json({ token, expiresAt });
