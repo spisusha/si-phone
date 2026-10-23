@@ -121,7 +121,7 @@ export default function SkuVariantScreen() {
         )}
       </div>
 
-      <h1 className="detail-title">{title}</h1>
+      <h1 className="detail-title">{title.replace(/^Apple\s+/, '')}</h1>
 
       {subtitleParts.length > 0 && (
         <p className="detail-desc">{subtitleParts.join(' • ')}</p>

@@ -5,9 +5,16 @@ import { useCartStore } from '../store/cartStore';
 import { useConfigurator } from '../hooks/useConfigurator';
 import OptionSelector from '../components/OptionSelector';
 import { DetailSkeleton } from '../components/Skeleton';
+import { formatStorage } from '../domain/variantFormat';
 import { hasNativeBackButton } from '../telegram/telegramWebApp';
 import { haptic } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
+
+// Как показывать значения опций: «1024» → «1 ТБ»
+const OPTION_FORMAT: Record<string, (v: string) => string> = {
+  storage: (v) => formatStorage(v),
+  size: (v) => (/^\d+(\.\d+)?$/.test(v) ? `${v}″` : v),
+};
 
 const OPTION_LABELS: Record<string, string> = {
   storage: 'Память',
@@ -94,7 +101,7 @@ export default function ProductDetailScreen() {
         )}
       </div>
 
-      <h1 className="detail-title">{family.title}</h1>
+      <h1 className="detail-title">{family.title.replace(/^Apple\s+/, '')}</h1>
       <p className="detail-desc">{family.description}</p>
 
       <div className="detail-options">
@@ -126,6 +133,7 @@ export default function ProductDetailScreen() {
             value={selectedOptions[key]}
             onChange={(val) => handleOptionChange(key, val)}
             disabledOptions={disabledOptionValues[key] ?? []}
+            format={OPTION_FORMAT[key]}
           />
         ))}
       </div>

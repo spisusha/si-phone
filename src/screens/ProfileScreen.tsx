@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { getTgUser } from '../telegram/telegramWebApp';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
 import { IconPhone, IconPin, IconTelegram } from '../components/icons';
+import { openTelegramChat } from '../telegram/telegramWebApp';
 import './ProfileScreen.css';
+
+// Контакты магазина
+const TG_CONTACTS = ['andr3i23', 'l_bobr_l'];
+const PHONES = [
+  { tel: '+79164050444', label: '+7 916 405-04-44' },
+  { tel: '+79252010234', label: '+7 925 201-02-34' },
+];
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'auto', label: 'Авто' },
@@ -22,7 +30,6 @@ export default function ProfileScreen() {
   const firstName = tgUser?.first_name || 'Пользователь';
   const lastName = tgUser?.last_name || '';
   const username = tgUser?.username;
-  const tgId = tgUser?.id;
 
   return (
     <div className="page profile-page">
@@ -45,14 +52,11 @@ export default function ProfileScreen() {
           {username && (
             <p className="profile-username">@{username}</p>
           )}
-          {tgId && (
-            <p className="profile-id">ID: {tgId}</p>
-          )}
         </div>
       </div>
 
+      <p className="tg-section-title">О магазине</p>
       <div className="profile-section">
-        <h3>О магазине</h3>
         <div className="profile-about">
           <p className="profile-about__lead">Оригинальные гаджеты по сифанутым ценам 🤙</p>
           <p className="profile-about__note">Цены меняются ежедневно ‼️</p>
@@ -60,34 +64,32 @@ export default function ProfileScreen() {
         </div>
       </div>
 
-      <div className="profile-section">
-        <h3>Контакты</h3>
-        <div className="profile-contacts">
-          <div className="profile-contact-row">
-            <IconPhone size={20} className="profile-contact-icon" />
-            <span>
-              <a href="tel:+79164050444" className="profile-contact-link">+7 916 405-04-44</a>
-              {' и '}
-              <a href="tel:+79252010234" className="profile-contact-link">+7 925 201-02-34</a>
-            </span>
-          </div>
-          <div className="profile-contact-row">
-            <IconTelegram size={20} className="profile-contact-icon" />
-            <span>
-              <a href="https://t.me/andr3i23" target="_blank" rel="noopener noreferrer" className="profile-contact-link">@andr3i23</a>
-              {' и '}
-              <a href="https://t.me/l_bobr_l" target="_blank" rel="noopener noreferrer" className="profile-contact-link">@l_bobr_l</a>
-            </span>
-          </div>
-          <div className="profile-contact-row">
-            <IconPin size={20} className="profile-contact-icon" />
-            <span>город Москва</span>
-          </div>
+      <p className="tg-section-title">Связаться</p>
+      <div className="tg-group profile-contacts-list">
+        {TG_CONTACTS.map((c) => (
+          <button key={c} className="tg-row" onClick={() => openTelegramChat(`https://t.me/${c}`)}>
+            <IconTelegram size={20} className="tg-row__icon" />
+            <span className="tg-row__main tg-row__title">Написать в Telegram</span>
+            <span className="tg-row__value profile-contact-value">@{c}</span>
+            <svg className="tg-row__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+        ))}
+        {PHONES.map((p) => (
+          <a key={p.tel} className="tg-row" href={`tel:${p.tel}`}>
+            <IconPhone size={20} className="tg-row__icon" />
+            <span className="tg-row__main tg-row__title">Позвонить</span>
+            <span className="tg-row__value profile-contact-value">{p.label}</span>
+            <svg className="tg-row__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+          </a>
+        ))}
+        <div className="tg-row">
+          <IconPin size={20} className="tg-row__icon" />
+          <span className="tg-row__main tg-row__title">Москва</span>
         </div>
       </div>
 
+      <p className="tg-section-title">Оформление</p>
       <div className="profile-section">
-        <h3>Оформление</h3>
         <div className="profile-theme" role="radiogroup" aria-label="Тема оформления">
           {THEME_OPTIONS.map((o) => (
             <button

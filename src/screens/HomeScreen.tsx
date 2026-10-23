@@ -8,9 +8,8 @@ import ProductCard from '../components/ProductCard';
 import CategoryFilter from '../components/CategoryFilter';
 import SortBar from '../components/SortBar';
 import { ProductGridSkeleton } from '../components/Skeleton';
-import { IconBox } from '../components/icons';
-import { openTelegramChat } from '../telegram/telegramWebApp';
-import { MANAGER_URL } from '../domain/shop';
+import ManagerHint from '../components/ManagerHint';
+import { categoryName } from '../domain/shop';
 import './HomeScreen.css';
 
 function catFromParam(val: string | null): Category | null {
@@ -53,6 +52,32 @@ export default function HomeScreen() {
 
   if (loading) return <ProductGridSkeleton />;
 
+  // Карточки, которые реально видны: у Watch и AirPods — по одной на вариант в наличии,
+  // поэтому модель без вариантов в наличии карточек не даёт.
+  const cards = filtered.flatMap((f: ProductFamily) => {
+    const isSkuPerRow =
+      f.category === 'Watch' ||
+      (f.category === 'AirPods' && !/max/i.test(f.title));
+    if (isSkuPerRow) {
+      const fvAll = variants.filter((v) => v.family_id === f.id && v.in_stock);
+      const seen = new Map<string, typeof fvAll[0]>();
+      for (const v of fvAll) {
+        const key = v.supplier_xmlid ? v.supplier_xmlid.replace(/^0+/, '') || '0' : v.id;
+        if (!seen.has(key)) seen.set(key, v);
+      }
+      return [...seen.values()].map((v) => (
+        <ProductCard key={v.id} family={f} variants={[v]} skuVariant={v} />
+      ));
+    }
+    return [
+      <ProductCard
+        key={f.id}
+        family={f}
+        variants={variants.filter((v) => v.family_id === f.id)}
+      />,
+    ];
+  });
+
   return (
     <div className="page">
       <header className="home-header">
@@ -62,51 +87,19 @@ export default function HomeScreen() {
       <CategoryFilter value={category} onChange={setCategory} />
       <SortBar value={sort} onChange={(v: SortOption) => setSort(v)} />
       <div className="product-grid">
-        {filtered.flatMap((f: ProductFamily) => {
-          const isSkuPerRow =
-            f.category === 'Watch' ||
-            (f.category === 'AirPods' && !/max/i.test(f.title));
-          if (isSkuPerRow) {
-            const fvAll = variants.filter((v) => v.family_id === f.id && v.in_stock);
-            const seen = new Map<string, typeof fvAll[0]>();
-            for (const v of fvAll) {
-              const key = v.supplier_xmlid ? v.supplier_xmlid.replace(/^0+/, '') || '0' : v.id;
-              if (!seen.has(key)) seen.set(key, v);
-            }
-            const fv = [...seen.values()];
-            if (fv.length === 0) return [];
-            return fv.map((v) => (
-              <ProductCard key={v.id} family={f} variants={[v]} skuVariant={v} />
-            ));
-          }
-          return [
-            <ProductCard
-              key={f.id}
-              family={f}
-              variants={variants.filter((v) => v.family_id === f.id)}
-            />,
-          ];
-        })}
-        {filtered.length === 0 && (
-          <p style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--color-muted)', padding: '32px 0' }}>
-            Товары не найдены
-          </p>
+        {cards}
+        {cards.length === 0 && (
+          <div style={{ gridColumn: '1/-1' }}>
+            <ManagerHint
+              title={category ? `Сейчас ${categoryName(category)} нет на витрине` : 'Витрина пока пустая'}
+              text="Напишите менеджеру — он проверит, что есть на складе, и подберёт модель."
+            />
+          </div>
         )}
       </div>
 
-      {/* Тихая подсказка вместо бегущей строки: в конце витрины, где человек и ищет «а если нет?» */}
-      <section className="home-hint">
-        <IconBox size={22} className="home-hint__icon" />
-        <div className="home-hint__body">
-          <p className="home-hint__title">Не нашли свою модель?</p>
-          <p className="home-hint__text">
-            Возможно, она уже на складе, но ещё не на витрине. Менеджер проверит наличие и забронирует.
-          </p>
-          <button className="home-hint__link" onClick={() => openTelegramChat(MANAGER_URL)}>
-            Написать менеджеру
-          </button>
-        </div>
-      </section>
+      {/* В конце витрины — для тех, кто долистал и не нашёл; при пустом фильтре — своя подсказка выше */}
+      {cards.length > 0 && <ManagerHint />}
     </div>
   );
 }

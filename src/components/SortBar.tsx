@@ -1,4 +1,5 @@
 import type { SortOption } from '../domain/types';
+import { useChipRow } from '../hooks/useChipRow';
 import './SortBar.css';
 import { haptic } from '../telegram/telegramWebApp';
 
@@ -15,8 +16,9 @@ interface Props {
 }
 
 export default function SortBar({ value, onChange }: Props) {
+  const { ref, fadeClass } = useChipRow<HTMLDivElement>();
   return (
-    <div className="sort-bar">
+    <div className={`sort-bar chip-row${fadeClass}`} ref={ref}>
       {OPTIONS.map((o) => (
         <button
           key={o.value}

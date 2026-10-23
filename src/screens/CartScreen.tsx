@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
-import { cartItemSubtitle } from '../domain/variantFormat';
+import { cartItemDisplay } from '../domain/variantFormat';
+import { plural } from '../domain/plural';
 import { IconCart, IconInfo } from '../components/icons';
 import { useTelegramMainButton } from '../telegram/hooks';
 import { haptic } from '../telegram/telegramWebApp';
@@ -10,6 +11,7 @@ export default function CartScreen() {
   const { items, setQty, remove, total } = useCartStore();
   const navigate = useNavigate();
   const sum = total();
+  const count = items.reduce((n, i) => n + i.qty, 0);
 
   // В Telegram итоговое действие — большая нижняя кнопка с суммой; своя — только в браузере.
   const nativeMain = useTelegramMainButton({
@@ -23,9 +25,9 @@ export default function CartScreen() {
       <div className="page cart-empty">
         <IconCart size={56} className="cart-empty-icon" />
         <h2>Корзина пуста</h2>
-        <p>Добавьте товары из каталога</p>
-        <button className="btn btn-primary" onClick={() => navigate('/')}>
-          На главную
+        <p>Загляните в каталог — там вся техника в наличии</p>
+        <button className="btn btn-primary" onClick={() => navigate('/catalog')}>
+          Перейти в каталог
         </button>
       </div>
     );
@@ -35,38 +37,38 @@ export default function CartScreen() {
     <div className="page">
       <h1 className="page-title">Корзина</h1>
       <div className="cart-items">
-        {items.map((item) => (
-          <div key={item.variantId} className="cart-item">
-            <div className="cart-item__img">
-              {item.image ? (
-                <img src={item.image} alt={item.titleSnapshot} />
-              ) : (
-                <div className="cart-item__placeholder" />
-              )}
-            </div>
-            <div className="cart-item__info">
-              <h3 className="cart-item__title">{item.titleSnapshot}</h3>
-              {cartItemSubtitle(item) && (
-                <p className="cart-item__opts">{cartItemSubtitle(item)}</p>
-              )}
-              <span className="cart-item__price">
-                {item.priceSnapshot.toLocaleString('ru-RU')} ₽
-              </span>
-              <div className="cart-item__qty">
-                <button onClick={() => { haptic('select'); setQty(item.variantId, item.qty - 1); }} aria-label="Меньше">−</button>
-                <span>{item.qty}</span>
-                <button onClick={() => { haptic('select'); setQty(item.variantId, item.qty + 1); }} aria-label="Больше">+</button>
+        {items.map((item) => {
+          const { title, subtitle } = cartItemDisplay(item);
+          return (
+            <div key={item.variantId} className="cart-item">
+              <div className="cart-item__img">
+                <img src={item.image || '/placeholder.svg'} alt="" />
               </div>
+              <div className="cart-item__info">
+                <h3 className="cart-item__title">{title}</h3>
+                {subtitle && <p className="cart-item__opts">{subtitle}</p>}
+                <div className="cart-item__bottom">
+                  <span className="cart-item__price">
+                    {(item.priceSnapshot * item.qty).toLocaleString('ru-RU')} ₽
+                  </span>
+                  <div className="cart-item__qty">
+                    <button onClick={() => { haptic('select'); setQty(item.variantId, item.qty - 1); }} aria-label="Меньше">−</button>
+                    <span aria-live="polite">{item.qty}</span>
+                    {/* больше 10 штук одного товара сервер не примет */}
+                    <button onClick={() => { haptic('select'); setQty(item.variantId, item.qty + 1); }} disabled={item.qty >= 10} aria-label="Больше">+</button>
+                  </div>
+                </div>
+              </div>
+              <button className="cart-item__remove" onClick={() => { haptic('select'); remove(item.variantId); }} aria-label="Удалить из корзины">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+              </button>
             </div>
-            <button className="cart-item__remove" onClick={() => { haptic('select'); remove(item.variantId); }} aria-label="Удалить из корзины">
-              ✕
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="cart-total">
-        <span>Итого</span>
+        <span>Итого · {plural(count, ['товар', 'товара', 'товаров'])}</span>
         <span className="cart-total__value">{sum.toLocaleString('ru-RU')} ₽</span>
       </div>
 

@@ -1,0 +1,37 @@
+/* Подсказка «нет на витрине — напишите менеджеру» */
+.manager-hint {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 20px;
+  text-align: left;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-light);
+}
+
+.manager-hint__icon {
+  color: var(--color-accent);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.manager-hint__title {
+  font-size: var(--fs-sub);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.manager-hint__text {
+  font-size: var(--fs-foot);
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.manager-hint__link {
+  margin-top: 8px;
+  min-height: 32px;
+  font-size: var(--fs-foot);
+  font-weight: 600;
+  color: var(--color-accent);
+}

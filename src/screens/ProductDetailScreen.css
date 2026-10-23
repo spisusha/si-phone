@@ -17,7 +17,7 @@
 .detail-gallery {
   background: var(--color-media-bg);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -26,7 +26,8 @@
 }
 
 .detail-gallery img {
-  max-height: 240px;
+  height: 220px;
+  width: 100%;
   object-fit: contain;
   mix-blend-mode: multiply;
 }

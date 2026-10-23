@@ -173,3 +173,7 @@
   margin-top: 8px;
   padding-bottom: 8px;
 }
+
+.profile-contact-value {
+  color: var(--color-muted);
+}

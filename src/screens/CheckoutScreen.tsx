@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api/orderRepo';
-import { cartItemSubtitle } from '../domain/variantFormat';
+import { cartItemDisplay } from '../domain/variantFormat';
+import { plural } from '../domain/plural';
 import { getTgUser, haptic, setClosingConfirmation } from '../telegram/telegramWebApp';
 import { useTelegramMainButton } from '../telegram/hooks';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
@@ -89,121 +90,86 @@ export default function CheckoutScreen() {
       : <Navigate to="/cart" replace />;
   }
 
-  return (
-    <div className="page">
-      <h1 className="page-title">Оформление заказа</h1>
+  const count = items.reduce((n, i) => n + i.qty, 0);
 
-      <section className="checkout-section checkout-items">
-        <h3>Ваш заказ</h3>
-        {items.map((item) => (
-          <div key={item.variantId} className="checkout-item">
-            <img className="checkout-item__img" src={item.image || '/placeholder.svg'} alt="" />
-            <div className="checkout-item__info">
-              <span className="checkout-item__name">{item.titleSnapshot}</span>
-              {cartItemSubtitle(item) && (
-                <span className="checkout-item__opts">{cartItemSubtitle(item)}</span>
-              )}
-              <span className="checkout-item__price">
-                {item.qty > 1 ? `${item.qty} × ` : ''}
+  return (
+    <div className="page checkout">
+      <h1 className="page-title">Оформление</h1>
+
+      {/* Экран в стиле настроек Telegram: сгруппированные блоки и подписи над ними */}
+      <p className="tg-section-title">Ваш заказ</p>
+      <div className="tg-group">
+        {items.map((item) => {
+          const { title, subtitle } = cartItemDisplay(item);
+          return (
+            <div key={item.variantId} className="tg-row checkout-item">
+              <img className="checkout-item__img" src={item.image || '/placeholder.svg'} alt="" />
+              <div className="tg-row__main">
+                <span className="tg-row__title">{title}</span>
+                {subtitle && <span className="tg-row__sub">{subtitle}</span>}
+              </div>
+              <span className="tg-row__value checkout-item__price">
+                {item.qty > 1 && <span className="checkout-item__qty">{item.qty} × </span>}
                 {item.priceSnapshot.toLocaleString('ru-RU')} ₽
               </span>
             </div>
-          </div>
-        ))}
-      </section>
-
-      <section className="checkout-section">
-        <h3>Контактный телефон <span className="checkout-optional">необязательно</span></h3>
-        <div className="checkout-phone">
-          <input
-            type="tel"
-            placeholder="+7 (___) ___-__-__"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            autoComplete="tel"
-          />
-        </div>
-      </section>
-
-      <section className="checkout-section">
-        <h3>Способ получения</h3>
-        <div className="checkout-options">
-          <label className={`checkout-option${delivery === 'pickup' ? ' active' : ''}`}>
-            <input
-              type="radio"
-              name="delivery"
-              checked={delivery === 'pickup'}
-              onChange={() => setDelivery('pickup')}
-            />
-            <div>
-              <strong>Самовывоз</strong>
-              <span>Забрать в магазине</span>
-            </div>
-          </label>
-          <label className={`checkout-option${delivery === 'delivery' ? ' active' : ''}`}>
-            <input
-              type="radio"
-              name="delivery"
-              checked={delivery === 'delivery'}
-              onChange={() => setDelivery('delivery')}
-            />
-            <div>
-              <strong>Доставка</strong>
-              <span>Курьером по городу</span>
-            </div>
-          </label>
-        </div>
-
-        {delivery === 'delivery' && (
-          <div className="checkout-address">
-            <input
-              type="text"
-              placeholder="Адрес доставки"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-            />
-          </div>
-        )}
-      </section>
-
-      <section className="checkout-section">
-        <h3>Способ оплаты</h3>
-        <div className="checkout-options">
-          <label className={`checkout-option${payment === 'cash' ? ' active' : ''}`}>
-            <input
-              type="radio"
-              name="payment"
-              checked={payment === 'cash'}
-              onChange={() => setPayment('cash')}
-            />
-            <div>
-              <strong>Наличными</strong>
-              <span>При получении</span>
-            </div>
-          </label>
-          <label className={`checkout-option${payment === 'online' ? ' active' : ''}`}>
-            <input
-              type="radio"
-              name="payment"
-              checked={payment === 'online'}
-              onChange={() => setPayment('online')}
-            />
-            <div>
-              <strong>Онлайн</strong>
-              <span>Перевод</span>
-            </div>
-          </label>
-        </div>
-      </section>
-
-      <div className="checkout-summary">
-        <div className="checkout-summary__row">
-          <span>Товаров: {items.reduce((s, i) => s + i.qty, 0)}</span>
-          <span>{total().toLocaleString('ru-RU')} ₽</span>
-        </div>
+          );
+        })}
       </div>
 
-      {error && <p className="checkout-error">{error}</p>}
+      <p className="tg-section-title">Получение</p>
+      <div className="tg-group" role="radiogroup" aria-label="Способ получения">
+        <OptionRow title="Самовывоз" sub="Забрать в магазине, Москва" checked={delivery === 'pickup'} onSelect={() => setDelivery('pickup')} />
+        <OptionRow title="Доставка" sub="Курьером по городу" checked={delivery === 'delivery'} onSelect={() => setDelivery('delivery')} />
+      </div>
+      {delivery === 'delivery' && (
+        <div className="tg-group tg-group--spaced">
+          <label className="tg-row tg-row--input">
+            <span className="tg-row__label">Адрес</span>
+            <input
+              type="text"
+              placeholder="Улица, дом, квартира"
+              value={address}
+              maxLength={300}
+              autoComplete="street-address"
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </label>
+        </div>
+      )}
+
+      <p className="tg-section-title">Оплата</p>
+      <div className="tg-group" role="radiogroup" aria-label="Способ оплаты">
+        <OptionRow title="Наличными" sub="При получении" checked={payment === 'cash'} onSelect={() => setPayment('cash')} />
+        <OptionRow title="Переводом" sub="Реквизиты пришлёт менеджер" checked={payment === 'online'} onSelect={() => setPayment('online')} />
+      </div>
+
+      <p className="tg-section-title">Связь</p>
+      <div className="tg-group">
+        <label className="tg-row tg-row--input">
+          <span className="tg-row__label">Телефон</span>
+          <input
+            type="tel"
+            inputMode="tel"
+            placeholder="+7 900 000-00-00"
+            value={phone}
+            maxLength={32}
+            autoComplete="tel"
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </label>
+      </div>
+      <p className="tg-section-footer">Необязательно — менеджер и так напишет вам в Telegram.</p>
+
+      <div className="tg-group checkout-summary">
+        <div className="tg-row">
+          <span className="tg-row__main tg-row__title">Итого · {plural(count, ['товар', 'товара', 'товаров'])}</span>
+          <span className="tg-row__value checkout-summary__total">{total().toLocaleString('ru-RU')} ₽</span>
+        </div>
+      </div>
+      <p className="tg-section-footer">Цену и наличие менеджер подтвердит после заказа.</p>
+
+      {error && <p className="checkout-error" role="alert">{error}</p>}
 
       {!nativeMain && (
         <button
@@ -215,5 +181,31 @@ export default function CheckoutScreen() {
         </button>
       )}
     </div>
+  );
+}
+
+// Строка-вариант «как в настройках Telegram»: название, пояснение и галочка справа.
+function OptionRow({ title, sub, checked, onSelect }: {
+  title: string;
+  sub: string;
+  checked: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      className="tg-row tg-row--option"
+      onClick={() => { if (!checked) haptic('select'); onSelect(); }}
+    >
+      <span className="tg-row__main">
+        <span className="tg-row__title">{title}</span>
+        <span className="tg-row__sub">{sub}</span>
+      </span>
+      <span className={`tg-check${checked ? ' is-on' : ''}`} aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+      </span>
+    </button>
   );
 }

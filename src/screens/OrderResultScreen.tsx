@@ -1,8 +1,11 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { OrderPayload } from '../domain/types';
-import { cartItemSubtitle } from '../domain/variantFormat';
+import { cartItemDisplay } from '../domain/variantFormat';
 import { IconBox, IconCheckCircle } from '../components/icons';
+import { openTelegramChat } from '../telegram/telegramWebApp';
+import { MANAGER_URL } from '../domain/shop';
+import { plural } from '../domain/plural';
 import './OrderResultScreen.css';
 
 interface LocationState {
@@ -42,77 +45,76 @@ export default function OrderResultScreen() {
   }
 
   const { payload, orderId } = state;
+  const count = payload.items.reduce((n, i) => n + i.qty, 0);
+
+  const goHome = () => {
+    sessionStorage.removeItem('lastOrder');
+    navigate('/');
+  };
 
   return (
     <div className="page result-page">
       <IconCheckCircle size={64} className="result-icon result-icon--ok" />
-      <h1 className="result-title">Заказ оформлен!</h1>
+      <h1 className="result-title">Заказ оформлен</h1>
       <p className="result-subtitle">
-        Спасибо за заказ! Менеджер свяжется с вами в ближайшее время
-        для подтверждения и уточнения деталей.
+        Менеджер напишет вам в Telegram, подтвердит цену и наличие и договорится о получении.
       </p>
 
-      <div className="result-card">
-        <div className="result-row">
-          <span>Номер заказа</span>
-          <span className="result-val">{orderId.slice(0, 8).toUpperCase()}</span>
+      <div className="tg-group result-group">
+        <div className="tg-row">
+          <span className="tg-row__main tg-row__title">Номер заказа</span>
+          <span className="tg-row__value result-code">{orderId.slice(0, 8).toUpperCase()}</span>
         </div>
-        <div className="result-row">
-          <span>Товаров</span>
-          <span className="result-val">{payload.items.reduce((s, i) => s + i.qty, 0)} шт.</span>
-        </div>
-        <div className="result-row">
-          <span>Итого</span>
-          <span className="result-val result-val--bold">
-            {payload.totals.toLocaleString('ru-RU')} ₽
-          </span>
-        </div>
-        <div className="result-row">
-          <span>Получение</span>
-          <span className="result-val">
-            {payload.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}
-          </span>
+        <div className="tg-row">
+          <span className="tg-row__main tg-row__title">Получение</span>
+          <span className="tg-row__value">{payload.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}</span>
         </div>
         {payload.address && (
-          <div className="result-row">
-            <span>Адрес</span>
-            <span className="result-val">{payload.address}</span>
+          <div className="tg-row">
+            <span className="tg-row__main tg-row__title">Адрес</span>
+            <span className="tg-row__value result-wrap">{payload.address}</span>
           </div>
         )}
+        <div className="tg-row">
+          <span className="tg-row__main tg-row__title">Оплата</span>
+          <span className="tg-row__value">{payload.paymentMethod === 'cash' ? 'Наличными' : 'Переводом'}</span>
+        </div>
         {payload.phone && (
-          <div className="result-row">
-            <span>Телефон</span>
-            <span className="result-val">{payload.phone}</span>
+          <div className="tg-row">
+            <span className="tg-row__main tg-row__title">Телефон</span>
+            <span className="tg-row__value">{payload.phone}</span>
           </div>
         )}
-        <div className="result-row">
-          <span>Оплата</span>
-          <span className="result-val">
-            {payload.paymentMethod === 'cash' ? 'Наличными' : 'Перевод'}
-          </span>
+      </div>
+
+      <p className="tg-section-title">{plural(count, ['товар', 'товара', 'товаров'])}</p>
+      <div className="tg-group">
+        {payload.items.map((item, i) => {
+          const { title, subtitle } = cartItemDisplay(item);
+          return (
+            <div key={i} className="tg-row">
+              <span className="tg-row__main">
+                <span className="tg-row__title result-item-title">{title}</span>
+                {subtitle && <span className="tg-row__sub">{subtitle}</span>}
+              </span>
+              <span className="tg-row__value">
+                {item.qty > 1 && <span className="result-qty">{item.qty} × </span>}
+                {item.priceSnapshot.toLocaleString('ru-RU')} ₽
+              </span>
+            </div>
+          );
+        })}
+        <div className="tg-row">
+          <span className="tg-row__main tg-row__title result-total-label">Итого</span>
+          <span className="tg-row__value result-total">{payload.totals.toLocaleString('ru-RU')} ₽</span>
         </div>
       </div>
 
-      <h3 className="result-items-title">Товары</h3>
-      <div className="result-items">
-        {payload.items.map((item, i) => (
-          <div key={i} className="result-item">
-            <span className="result-item__name">{item.titleSnapshot}</span>
-            {cartItemSubtitle(item) && (
-              <span className="result-item__opts">{cartItemSubtitle(item)}</span>
-            )}
-            <span className="result-item__price">
-              {item.qty} × {item.priceSnapshot.toLocaleString('ru-RU')} ₽
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <button className="btn btn-primary btn-block" onClick={() => {
-        sessionStorage.removeItem('lastOrder');
-        navigate('/');
-      }}>
+      <button className="btn btn-primary btn-block result-home" onClick={goHome}>
         На главную
+      </button>
+      <button className="result-link" onClick={() => openTelegramChat(MANAGER_URL)}>
+        Написать менеджеру
       </button>
     </div>
   );

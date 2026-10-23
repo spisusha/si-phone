@@ -43,6 +43,7 @@
 .cart-item__img {
   width: 72px;
   height: 72px;
+  padding: 6px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -68,11 +69,11 @@
 .cart-item__info {
   flex: 1;
   min-width: 0;
-  padding-right: 24px; /* место под крестик удаления */
+  padding-right: 28px; /* место под крестик удаления */
 }
 
 .cart-item__title {
-  font-size: 14px;
+  font-size: var(--fs-sub);
   font-weight: 600;
   margin-bottom: 2px;
 }
@@ -86,39 +87,51 @@
   text-overflow: ellipsis;
 }
 
+.cart-item__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .cart-item__price {
-  font-size: 15px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  display: block;
-  margin-bottom: 6px;
+  white-space: nowrap;
 }
 
 .cart-item__qty {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 99px;
+  background: var(--color-bg);
   overflow: hidden;
 }
 
+.cart-item__qty button:disabled {
+  opacity: 0.35;
+}
+
 .cart-item__qty button {
-  width: 32px;
-  height: 28px;
+  width: 40px;
+  height: 36px;
+  color: var(--color-text);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 16px;
   font-weight: 600;
-  background: var(--color-surface);
+  background: transparent;
 }
 
 .cart-item__qty button:active {
-  background: var(--color-bg);
+  background: var(--color-border);
 }
 
 .cart-item__qty span {
-  width: 32px;
+  width: 28px;
   text-align: center;
   font-size: 14px;
   font-weight: 600;
@@ -126,10 +139,10 @@
 
 .cart-item__remove {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
+  top: 2px;
+  right: 2px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;

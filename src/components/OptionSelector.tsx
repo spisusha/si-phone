@@ -8,12 +8,14 @@ interface Props {
   value: string | undefined;
   onChange: (val: string) => void;
   disabledOptions?: string[];
+  format?: (val: string) => string;
 }
 
-export default function OptionSelector({ label, options, value, onChange, disabledOptions = [] }: Props) {
+export default function OptionSelector({ label, options, value, onChange, disabledOptions = [], format = (v) => v }: Props) {
   const [showToast, setShowToast] = useState(false);
 
-  if (options.length === 0) return null;
+  // Один вариант — выбирать нечего, группа только мешает (значение и так видно в названии)
+  if (options.length <= 1) return null;
 
   const handleClick = (opt: string) => {
     if (disabledOptions.includes(opt)) {
@@ -38,7 +40,7 @@ export default function OptionSelector({ label, options, value, onChange, disabl
               className={`chip${value === opt ? ' chip--active' : ''}${isDisabled ? ' chip--disabled' : ''}`}
               onClick={() => handleClick(opt)}
             >
-              {opt}
+              {format(opt)}
             </button>
           );
         })}

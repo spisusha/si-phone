@@ -42,3 +42,12 @@ export function cartItemSubtitle(item: Pick<CartItem, 'titleSnapshot' | 'options
     .filter((p) => !title.includes(p.toLowerCase()))
     .join(' · ');
 }
+
+// «Apple iPhone 17 Pro Max • 256 ГБ • Cosmic Orange» → заголовок «iPhone 17 Pro Max»
+// и строка «256 ГБ · Cosmic Orange · eSIM» (из опций, а если их нет — из хвоста названия).
+export function cartItemDisplay(item: Pick<CartItem, 'titleSnapshot' | 'optionsSnapshot'>): { title: string; subtitle: string } {
+  const [head, ...rest] = item.titleSnapshot.split(' • ');
+  const title = head.replace(/^Apple\s+/, '');
+  const fromOptions = describeOptions(item.optionsSnapshot).filter((p) => !title.toLowerCase().includes(p.toLowerCase()));
+  return { title, subtitle: (fromOptions.length ? fromOptions : rest).join(' · ') };
+}

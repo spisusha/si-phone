@@ -6,6 +6,8 @@ import ProductCard from '../components/ProductCard';
 import { DetailSkeleton, ProductGridSkeleton } from '../components/Skeleton';
 import { hasNativeBackButton } from '../telegram/telegramWebApp';
 import { haptic } from '../telegram/telegramWebApp';
+import { plural } from '../domain/plural';
+import ManagerHint from '../components/ManagerHint';
 import './CatalogScreen.css';
 
 function isConfigurator(category: Category, _title: string): boolean {
@@ -115,7 +117,7 @@ export default function FamilyProductsScreen() {
         </div>
       )}
 
-      <p className="catalog-family-stats">{sorted.length} позиций</p>
+      <p className="catalog-family-stats">{plural(sorted.length, ['вариант', 'варианта', 'вариантов'])}</p>
 
       <div className="product-grid">
         {sorted.map((v) => (
@@ -124,7 +126,7 @@ export default function FamilyProductsScreen() {
       </div>
 
       {sorted.length === 0 && (
-        <p className="catalog-empty">Нет вариантов для этой модели</p>
+        <ManagerHint title="Этой модели сейчас нет на витрине" text="Напишите менеджеру — он проверит наличие и подберёт вариант." />
       )}
     </div>
   );

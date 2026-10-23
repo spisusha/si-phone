@@ -1,4 +1,5 @@
 @import './theme.css';
+@import './tg-list.css';
 
 *,
 *::before,
@@ -140,4 +141,20 @@ input:focus, select:focus, textarea:focus {
 
 ::-webkit-scrollbar {
   display: none;
+}
+
+/* Строка чипсов, которая листается вбок: мягкое затухание у края — «дальше есть ещё» */
+.chip-row--fade-right {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.chip-row--fade-left {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent);
+}
+
+.chip-row--fade-left.chip-row--fade-right {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
 }

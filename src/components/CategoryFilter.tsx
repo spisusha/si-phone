@@ -1,6 +1,7 @@
 import type { Category } from '../domain/types';
 import { ALL_CATEGORIES } from '../domain/types';
 import { CategoryIcon } from './icons';
+import { useChipRow } from '../hooks/useChipRow';
 import './CategoryFilter.css';
 import { haptic } from '../telegram/telegramWebApp';
 
@@ -10,8 +11,9 @@ interface Props {
 }
 
 export default function CategoryFilter({ value, onChange }: Props) {
+  const { ref, fadeClass } = useChipRow<HTMLDivElement>();
   return (
-    <div className="cat-filter">
+    <div className={`cat-filter chip-row${fadeClass}`} ref={ref}>
       <button
         className={`cat-chip${value === null ? ' cat-chip--active' : ''}`}
         onClick={() => { if (value !== null) haptic('select'); onChange(null); }}
