@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import './ErrorBoundary.css';
+import EmptyState from './EmptyState';
 
 interface Props {
   children: ReactNode;
@@ -28,14 +28,6 @@ export default class ErrorBoundary extends Component<Props, State> {
   render() {
     if (!this.state.hasError) return this.props.children;
 
-    return (
-      <div className="page error-boundary">
-        <h2>Что-то пошло не так</h2>
-        <p>Попробуйте открыть магазин заново. Если не поможет — напишите менеджеру.</p>
-        <button className="btn btn-primary" onClick={this.handleReload}>
-          Открыть заново
-        </button>
-      </div>
-    );
+    return <EmptyState kind="crash" action={{ label: 'Открыть заново', onClick: this.handleReload }} manager />;
   }
 }

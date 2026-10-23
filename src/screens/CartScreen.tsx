@@ -2,7 +2,8 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { cartItemDisplay } from '../domain/variantFormat';
 import { plural } from '../domain/plural';
-import { IconCart, IconInfo } from '../components/icons';
+import { IconInfo } from '../components/icons';
+import EmptyState from '../components/EmptyState';
 import { useTelegramMainButton } from '../telegram/hooks';
 import { haptic } from '../telegram/telegramWebApp';
 import './CartScreen.css';
@@ -22,14 +23,10 @@ export default function CartScreen() {
 
   if (items.length === 0) {
     return (
-      <div className="page cart-empty">
-        <IconCart size={56} className="cart-empty-icon" />
-        <h2>Корзина пуста</h2>
-        <p>Загляните в каталог — там вся техника в наличии</p>
-        <button className="btn btn-primary" onClick={() => navigate('/catalog')}>
-          Перейти в каталог
-        </button>
-      </div>
+      <EmptyState
+        kind="cart"
+        action={{ label: 'Перейти в каталог', onClick: () => navigate('/catalog') }}
+      />
     );
   }
 

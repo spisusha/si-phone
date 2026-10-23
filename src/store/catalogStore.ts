@@ -7,9 +7,12 @@ interface CatalogState {
   variants: Variant[];
   loading: boolean;
   loaded: boolean;
+  /** Каталог не загрузился (нет связи) — экраны честно говорят об этом, а не «товар не найден». */
+  failed: boolean;
   sort: SortOption;
   setSort: (s: SortOption) => void;
   load: () => Promise<void>;
+  retry: () => Promise<void>;
 }
 
 let inflight: Promise<void> | null = null;
@@ -21,6 +24,7 @@ export const useCatalogStore = create<CatalogState>()((set, get) => ({
   // а не мигают «Модель не найдена» / «Товары не найдены».
   loading: true,
   loaded: false,
+  failed: false,
   sort: 'popularity',
 
   setSort: (sort) => set({ sort }),
@@ -29,13 +33,18 @@ export const useCatalogStore = create<CatalogState>()((set, get) => ({
     if (get().loaded) return Promise.resolve();
     if (!inflight) {
       inflight = Promise.all([fetchFamilies(), fetchVariants()])
-        .then(([families, variants]) => set({ families, variants, loading: false, loaded: true }))
+        .then(([families, variants]) => set({ families, variants, loading: false, loaded: true, failed: false }))
         .catch((err) => {
           console.error('catalog load failed', err);
-          set({ loading: false });
+          set({ loading: false, failed: true });
         })
         .finally(() => { inflight = null; });
     }
     return inflight;
+  },
+
+  retry: () => {
+    set({ loading: true, failed: false, loaded: false });
+    return get().load();
   },
 }));

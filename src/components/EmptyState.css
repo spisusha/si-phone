@@ -1,0 +1,123 @@
+/* ── Пустые экраны: общая раскладка ── */
+
+.page.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 48px;
+}
+
+.empty__title {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  max-width: 300px;
+}
+
+.empty__text {
+  font-size: var(--fs-sub);
+  color: var(--color-muted);
+  line-height: 1.4;
+  max-width: 300px;
+  margin-bottom: 20px;
+}
+
+.empty__action {
+  min-width: 220px;
+  min-height: 48px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.empty__manager {
+  min-height: var(--tap);
+  margin-top: 4px;
+  padding: 0 12px;
+  color: var(--color-accent);
+  font-size: var(--fs-sub);
+  font-weight: 500;
+}
+
+/* ── «Рисунок»: линейная сценка ── */
+
+.empty__scene {
+  width: 176px;
+  height: 132px;
+  margin-bottom: 12px;
+}
+
+.scene-line {
+  stroke: var(--color-muted);
+  stroke-width: 2.5;
+  opacity: 0.55;
+}
+
+.scene-thin {
+  stroke-width: 2;
+  opacity: 0.3;
+}
+
+.scene-dash {
+  stroke-dasharray: 3 5;
+}
+
+.scene-accent {
+  stroke: var(--color-accent);
+  stroke-width: 3;
+}
+
+.scene-shadow {
+  fill: var(--color-primary-light);
+}
+
+/* Движение один раз при появлении: телефон опускается, лупа «ищет», крестик мигает */
+.scene-drop {
+  animation: scene-drop 0.9s cubic-bezier(0.3, 1.4, 0.5, 1) 0.15s both;
+}
+
+@keyframes scene-drop {
+  from { transform: translateY(-22px); opacity: 0; }
+}
+
+.scene-search {
+  transform-box: fill-box;
+  transform-origin: 20% 20%;
+  animation: scene-search 1.4s ease-in-out 0.2s both;
+}
+
+@keyframes scene-search {
+  0%   { transform: translate(-30px, -16px); opacity: 0; }
+  30%  { opacity: 1; }
+  55%  { transform: translate(-12px, 6px); }
+  100% { transform: none; }
+}
+
+.scene-blink {
+  animation: scene-blink 1.2s ease-in-out 0.3s 2 both;
+}
+
+@keyframes scene-blink {
+  50% { opacity: 0.2; }
+}
+
+.scene-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: scene-spin 0.9s ease-out 0.2s both;
+}
+
+@keyframes scene-spin {
+  from { transform: rotate(-200deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-drop,
+  .scene-search,
+  .scene-blink,
+  .scene-spin {
+    animation: none;
+  }
+}

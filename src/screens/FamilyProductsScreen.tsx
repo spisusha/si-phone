@@ -9,6 +9,7 @@ import { haptic } from '../telegram/telegramWebApp';
 import { plural } from '../domain/plural';
 import ManagerHint from '../components/ManagerHint';
 import './CatalogScreen.css';
+import { CatalogFailed, NotFound } from '../components/EmptyState';
 
 function isConfigurator(category: Category, _title: string): boolean {
   if (category === 'AirPods' && /max/i.test(_title)) return true;
@@ -21,7 +22,7 @@ export default function FamilyProductsScreen() {
   const nativeBack = hasNativeBackButton();
   const { category: slug, familyId } = useParams<{ category: string; familyId: string }>();
   const navigate = useNavigate();
-  const { families, variants, loading, load } = useCatalogStore();
+  const { families, variants, loading, failed, load } = useCatalogStore();
 
   useEffect(() => { load(); }, [load]);
 
@@ -89,7 +90,8 @@ export default function FamilyProductsScreen() {
   }, [deduped, isMacBook, chipFilter]);
 
   if (loading) return <ProductGridSkeleton />;
-  if (!family) return <div className="page"><p>Модель не найдена</p></div>;
+  if (failed) return <CatalogFailed />;
+  if (!family) return <NotFound />;
   if (redirect) return <DetailSkeleton />;
 
   const sorted = [...filtered].sort((a, b) => {

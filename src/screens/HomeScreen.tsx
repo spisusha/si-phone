@@ -11,6 +11,7 @@ import { ProductGridSkeleton } from '../components/Skeleton';
 import ManagerHint from '../components/ManagerHint';
 import { categoryName } from '../domain/shop';
 import './HomeScreen.css';
+import { CatalogFailed } from '../components/EmptyState';
 
 function catFromParam(val: string | null): Category | null {
   if (!val) return null;
@@ -18,7 +19,7 @@ function catFromParam(val: string | null): Category | null {
 }
 
 export default function HomeScreen() {
-  const { families, variants, loading, load, sort, setSort } = useCatalogStore();
+  const { families, variants, loading, failed, load, sort, setSort } = useCatalogStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const category = catFromParam(searchParams.get('cat'));
 
@@ -51,6 +52,7 @@ export default function HomeScreen() {
   }, [families, variants, category, sort]);
 
   if (loading) return <ProductGridSkeleton />;
+  if (failed) return <CatalogFailed />;
 
   // Карточки, которые реально видны: у Watch и AirPods — по одной на вариант в наличии,
   // поэтому модель без вариантов в наличии карточек не даёт.

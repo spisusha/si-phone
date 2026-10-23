@@ -7,9 +7,10 @@ import ProductCard from '../components/ProductCard';
 import SortBar from '../components/SortBar';
 import { ProductGridSkeleton } from '../components/Skeleton';
 import './ProductListScreen.css';
+import { CatalogFailed } from '../components/EmptyState';
 
 export default function ProductListScreen() {
-  const { families, variants, loading, load, sort, setSort } = useCatalogStore();
+  const { families, variants, loading, failed, load, sort, setSort } = useCatalogStore();
   const [params] = useSearchParams();
 
   useEffect(() => { load(); }, [load]);
@@ -44,6 +45,7 @@ export default function ProductListScreen() {
   }, [families, variants, filters, sort]);
 
   if (loading) return <ProductGridSkeleton />;
+  if (failed) return <CatalogFailed />;
 
   const filterDesc = Object.entries(filters)
     .map(([k, v]) => `${k}: ${v}`)

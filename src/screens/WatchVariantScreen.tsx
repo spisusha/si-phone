@@ -7,6 +7,7 @@ import { DetailSkeleton } from '../components/Skeleton';
 import AddToCart from '../components/AddToCart';
 import { hasNativeBackButton, hasNativeMainButton } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
+import { CatalogFailed, NotFound } from '../components/EmptyState';
 
 
 export default function SkuVariantScreen() {
@@ -14,7 +15,7 @@ export default function SkuVariantScreen() {
   const nativeBack = hasNativeBackButton();
   const { variantId } = useParams<{ variantId: string }>();
   const navigate = useNavigate();
-  const { families, variants, loading, load } = useCatalogStore();
+  const { families, variants, loading, failed, load } = useCatalogStore();
   const [imgIdx, setImgIdx] = useState(0);
 
   useEffect(() => { load(); }, [load]);
@@ -23,7 +24,8 @@ export default function SkuVariantScreen() {
   const family = variant ? families.find((f) => f.id === variant.family_id) : null;
 
   if (loading) return <DetailSkeleton />;
-  if (!variant || !family) return <div className="page"><p className="catalog-empty">Товар не найден</p></div>;
+  if (failed) return <CatalogFailed />;
+  if (!variant || !family) return <NotFound />;
 
   const isWatch = family.category === 'Watch';
   const isIphone = family.category === 'iPhone';

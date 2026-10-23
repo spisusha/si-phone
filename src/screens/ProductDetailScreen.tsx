@@ -8,6 +8,7 @@ import { DetailSkeleton } from '../components/Skeleton';
 import { formatStorage } from '../domain/variantFormat';
 import { hasNativeBackButton, hasNativeMainButton, haptic } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
+import { CatalogFailed, NotFound } from '../components/EmptyState';
 
 // Как показывать значения опций: «1024» → «1 ТБ»
 const OPTION_FORMAT: Record<string, (v: string) => string> = {
@@ -29,7 +30,7 @@ export default function ProductDetailScreen() {
   const nativeBack = hasNativeBackButton();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { families, variants, loading, load } = useCatalogStore();
+  const { families, variants, loading, failed, load } = useCatalogStore();
 
   useEffect(() => { load(); }, [load]);
 
@@ -54,7 +55,8 @@ export default function ProductDetailScreen() {
   } = useConfigurator(familyVariants, family?.images ?? [], family);
 
   if (loading) return <DetailSkeleton />;
-  if (!family) return <div className="page"><p className="catalog-empty">Товар не найден</p></div>;
+  if (failed) return <CatalogFailed />;
+  if (!family) return <NotFound />;
 
   const cartItem = resolvedVariant ? {
     variantId: resolvedVariant.id,

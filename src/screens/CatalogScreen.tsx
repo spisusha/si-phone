@@ -7,6 +7,7 @@ import { CategoryIcon } from '../components/icons';
 import { plural } from '../domain/plural';
 import ManagerHint from '../components/ManagerHint';
 import './CatalogScreen.css';
+import { CatalogFailed } from '../components/EmptyState';
 
 const CAT_SLUG: Record<Category, string> = {
   iPhone: 'iphone',
@@ -17,12 +18,13 @@ const CAT_SLUG: Record<Category, string> = {
 };
 
 export default function CatalogScreen() {
-  const { families, loading, load } = useCatalogStore();
+  const { families, loading, failed, load } = useCatalogStore();
   const navigate = useNavigate();
 
   useEffect(() => { load(); }, [load]);
 
   if (loading) return <ListSkeleton rows={5} />;
+  if (failed) return <CatalogFailed />;
 
   return (
     <div className="page">

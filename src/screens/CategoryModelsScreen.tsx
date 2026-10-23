@@ -9,6 +9,7 @@ import { categoryName } from '../domain/shop';
 import { getDisplayImages, getFirstImage } from '../domain/imageUtils';
 import { hasNativeBackButton } from '../telegram/telegramWebApp';
 import './CatalogScreen.css';
+import { CatalogFailed, NotFound } from '../components/EmptyState';
 
 const SLUG_TO_CAT: Record<string, Category> = {
   iphone: 'iPhone',
@@ -26,7 +27,7 @@ export default function CategoryModelsScreen() {
   const nativeBack = hasNativeBackButton();
   const { category: slug } = useParams<{ category: string }>();
   const navigate = useNavigate();
-  const { families, variants, loading, load } = useCatalogStore();
+  const { families, variants, loading, failed, load } = useCatalogStore();
 
   useEffect(() => { load(); }, [load]);
 
@@ -98,7 +99,8 @@ export default function CategoryModelsScreen() {
   const maxFamily = isAirpods ? models.find((f) => /max/i.test(f.title)) : null;
 
   if (loading) return <ListSkeleton rows={6} />;
-  if (!category) return <div className="page"><p>Категория не найдена</p></div>;
+  if (failed) return <CatalogFailed />;
+  if (!category) return <NotFound />;
 
   return (
     <div className="page">
