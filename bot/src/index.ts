@@ -8,6 +8,8 @@ import {
   WELCOME_MESSAGE,
   CONTACTS_MESSAGE,
   FALLBACK_MESSAGE,
+  OTHER_CITY_MESSAGE,
+  OTHER_CITY_KEYS,
   FAQ,
   MANAGER,
   MANAGER_URL,
@@ -136,15 +138,47 @@ async function handleMessage(env: Env, message: NonNullable<TelegramUpdate["mess
 }
 
 // Свободный текст: ищем подходящий вопрос по ключевым словам, иначе — к менеджеру.
+// Ответ — без «заголовка-вопроса» и с двумя кнопками: так он похож на ответ человека, а не на справочник.
 async function answerFreeText(env: Env, chatId: number, text: string): Promise<void> {
-  const t = ` ${text.toLowerCase().replace(/ё/g, "е").replace(/\s+/g, " ")} `;
+  const t = ` ${text.toLowerCase().replace(/ё/g, "е").replace(/[?!.,;:()]/g, " ").replace(/\s+/g, " ")} `;
 
-  if (/(^| )(привет|здравств|добрый|доброе|хай|салам|старт|меню)/.test(t)) return sendWelcome(env, chatId);
+  if (/^ (привет|здравств|добрый|доброе|хай|салам|старт|меню)/.test(t)) return sendWelcome(env, chatId);
 
-  const item = findFaqItem(t);
-  const keyboard: Keyboard = { inline_keyboard: [[managerButton, allQuestionsButton], [shopButton(env)]] };
-  if (item) return sendMessage(env, chatId, `<b>${item.question}</b>\n\n${item.answer}`, keyboard);
-  return sendMessage(env, chatId, FALLBACK_MESSAGE, keyboard);
+  // Короткий уточняющий вопрос («а в Красноярск сколько?») продолжает прошлую тему, а не начинает новую.
+  const lastTopic = await env.KV.get(TOPIC_KEY(chatId));
+  const startsAsFollowUp = /^ (а|и|ну|еще) /.test(t);
+  const shortPriceQuestion = t.trim().split(" ").length <= 3;
+  let item = findFaqItem(t);
+  if (lastTopic && ((startsAsFollowUp && (!item || item.id === "price")) || (shortPriceQuestion && item?.id === "price"))) {
+    item = findFaqItemById(lastTopic) ?? item;
+  }
+
+  const keyboard: Keyboard = { inline_keyboard: [[managerButton, allQuestionsButton]] };
+
+  // Доставка в другой город — честно говорим, что пока только Москва
+  const aboutDelivery = item?.id === "delivery" || item?.id === "price" || /доставк|привез|отправ/.test(t);
+  if (aboutDelivery && OTHER_CITY_KEYS.some((k) => t.includes(k))) {
+    await rememberTopic(env, chatId, "delivery");
+    return sendMessage(env, chatId, OTHER_CITY_MESSAGE, keyboard);
+  }
+
+  if (!item) return sendMessage(env, chatId, FALLBACK_MESSAGE, keyboard);
+
+  await rememberTopic(env, chatId, item.id);
+  // Где ответ ведёт в магазин — добавляем зелёную кнопку
+  if (["how_order", "price", "availability"].includes(item.id)) keyboard.inline_keyboard.push([shopButton(env)]);
+  await sendMessage(env, chatId, item.answer, keyboard);
+}
+
+// Тема последнего ответа — 15 минут, только её id (не текст переписки).
+const TOPIC_KEY = (chatId: number) => `topic:${chatId}`;
+async function rememberTopic(env: Env, chatId: number, itemId: string): Promise<void> {
+  await env.KV.put(TOPIC_KEY(chatId), itemId, { expirationTtl: 15 * 60 });
+}
+
+function findFaqItemById(id: string): FaqItem | null {
+  for (const section of FAQ) for (const item of section.items) if (item.id === id) return item;
+  return null;
 }
 
 // Вопрос с наибольшим «весом» совпавших ключевых слов: длиннее слово — точнее совпадение
