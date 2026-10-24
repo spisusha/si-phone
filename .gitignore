@@ -18,3 +18,9 @@ dist/
 .ruff_cache/
 .claude/*
 !.claude/launch.json
+
+# Фото каталога — официальные фото Apple, в открытый репозиторий не кладём (живут в хранилище Supabase)
+mini-app/supabase/catalog/photos/
+
+# Таблица каталога с закупочными ценами — коммерческая тайна, в открытый репозиторий не кладём (собирается generate.mjs, живёт в Supabase)
+mini-app/supabase/catalog/si-phone-catalog.*
