@@ -1,76 +1,167 @@
 import { supabase } from './supabaseClient';
 import { mockFamilies, mockVariants } from './mockData';
-import type { ProductFamily, Variant, Category } from '../domain/types';
+import type { ProductFamily, Variant, VariantOptions, Category } from '../domain/types';
+import { normalizeColorKey } from '../domain/imageUtils';
 
-const CATEGORY_MAP: Record<string, Category> = {
-  iphone: 'iPhone',
-  ipad: 'iPad',
-  macbook: 'MacBook',
-  watch: 'Watch',
-  airpods: 'AirPods',
-};
+// Каталог v2: модели (catalog_models) и товары (catalog_items) из нашей таблицы.
+// Экраны пока работают с прежними формами «семейство + варианты», поэтому здесь переводим одно в другое.
+// Закупочные цены и наценки витрина не видит: в catalog_items уже готовая цена для покупателя.
 
-function normalizeCategory(raw: string): Category {
-  return CATEGORY_MAP[raw.toLowerCase()] ?? (raw as Category);
+interface ModelRow {
+  id: string;
+  category: Category;
+  title: string;
+  sort: number;
+  created_at: string;
 }
 
-function normalizeFamilyImages(raw: unknown): { images: string[]; imagesByColor: Record<string, string[]> } {
-  if (Array.isArray(raw)) return { images: raw as string[], imagesByColor: {} };
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
-    const obj = raw as Record<string, unknown>;
-    return {
-      images: Array.isArray(obj.cover) ? (obj.cover as string[]) : [],
-      imagesByColor: (obj.byColor as Record<string, string[]>) || {},
-    };
+interface ItemRow {
+  id: number;
+  model_id: string;
+  name: string;
+  storage: string | null;
+  color: string | null;
+  color_hex: string | null;
+  sim: string | null;
+  size: string | null;
+  chip: string | null;
+  ram_ssd: string | null;
+  band: string | null;
+  keyboard: string | null;
+  price: number;
+  status: 'в наличии' | 'уточнить';
+  photo_url: string | null;
+  updated_at: string;
+}
+
+const ITEM_COLUMNS = 'id, model_id, name, storage, color, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, photo_url, updated_at';
+const PAGE = 1000; // Supabase отдаёт не больше 1000 строк за запрос
+
+// «256GB» → «256», «1TB» → «1024»
+function storageGb(s: string | null): string | undefined {
+  const m = /^(\d+)\s*(GB|TB)$/i.exec(s ?? '');
+  if (!m) return undefined;
+  return String(m[2].toUpperCase() === 'TB' ? Number(m[1]) * 1024 : Number(m[1]));
+}
+
+function itemOptions(it: ItemRow, category: Category, title: string): VariantOptions {
+  const color: VariantOptions = it.color && it.color_hex
+    ? { color: normalizeColorKey(it.color), colorHex: it.color_hex, colorLabel: it.color }
+    : {};
+  switch (category) {
+    case 'iPhone':
+      return { ...color, storage: storageGb(it.storage), simType: it.sim ?? undefined };
+    case 'iPad':
+      return { ...color, storage: storageGb(it.storage), connectivity: it.sim ?? undefined, chip: it.chip ?? undefined };
+    case 'MacBook':
+      return {
+        ...color,
+        chip: it.chip ?? undefined,
+        memStorage: it.ram_ssd ?? undefined,
+        size: it.size ?? undefined,
+        ...(it.keyboard === 'РУС' ? { ruKeyboard: 'true' } : {}),
+      };
+    case 'Watch':
+      return { size: it.size ?? undefined, band: it.band ?? undefined };
+    case 'AirPods':
+      // У AirPods Max выбирают цвет, у остальных выбирать нечего
+      return /max/i.test(title) ? color : {};
   }
-  return { images: [], imagesByColor: {} };
+}
+
+let cache: Promise<{ families: ProductFamily[]; variants: Variant[] }> | null = null;
+
+// Только при разработке: «?catalog=preview» в адресе — каталог из локального файла
+// (supabase/catalog/photos/catalog-preview.json, его не коммитим), чтобы проверить витрину до выкладки базы.
+const PREVIEW_URL = '/supabase/catalog/photos/catalog-preview.json';
+function previewMode(): boolean {
+  if (!import.meta.env.DEV) return false;
+  try {
+    if (new URLSearchParams(window.location.search).get('catalog') === 'preview') sessionStorage.setItem('catalogPreview', '1');
+    return sessionStorage.getItem('catalogPreview') === '1';
+  } catch {
+    return false;
+  }
+}
+
+async function fetchRows(): Promise<{ models: ModelRow[]; items: ItemRow[] }> {
+  if (previewMode()) {
+    const res = await fetch(PREVIEW_URL);
+    if (!res.ok) throw new Error(`preview: ${res.status}`);
+    return res.json();
+  }
+  const sb = supabase!;
+  const modelsReq = sb.from('catalog_models').select('id, category, title, sort, created_at').order('sort', { ascending: false });
+  const items: ItemRow[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await sb.from('catalog_items').select(ITEM_COLUMNS).order('id').range(from, from + PAGE - 1);
+    if (error) throw new Error(`catalog_items: ${error.message}`);
+    items.push(...(data as ItemRow[]));
+    if (!data || data.length < PAGE) break;
+  }
+  const { data: modelData, error: mErr } = await modelsReq;
+  if (mErr) throw new Error(`catalog_models: ${mErr.message}`);
+  return { models: modelData as ModelRow[], items };
+}
+
+async function loadCatalog(): Promise<{ families: ProductFamily[]; variants: Variant[] }> {
+  if (!supabase && !previewMode()) return { families: mockFamilies, variants: mockVariants };
+  const { models, items } = await fetchRows();
+  const modelById = new Map(models.map((m) => [m.id, m]));
+
+  const variants: Variant[] = [];
+  const photosByModel = new Map<string, { cover: string[]; byColor: Record<string, string[]> }>();
+  for (const it of items) {
+    const m = modelById.get(it.model_id);
+    if (!m) continue;
+    const options = itemOptions(it, m.category, m.title);
+    const images = it.photo_url ? [it.photo_url] : [];
+    variants.push({
+      id: String(it.id),
+      family_id: m.id,
+      options,
+      price: it.price,
+      // «уточнить» пока нельзя положить в корзину: цену и наличие подтверждает менеджер
+      in_stock: it.status === 'в наличии' && it.price > 0,
+      status: it.status,
+      name: it.name,
+      sku_code: String(it.id),
+      supplier_xmlid: String(it.id), // экраны склеивают одинаковые товары по этому полю — у нас каждый товар свой
+      images,
+      updated_at: it.updated_at,
+    });
+    if (it.photo_url) {
+      const p = photosByModel.get(m.id) ?? { cover: [], byColor: {} };
+      if (!p.cover.length) p.cover = [it.photo_url];
+      const key = options.color;
+      if (key && !p.byColor[key]) p.byColor[key] = [it.photo_url];
+      photosByModel.set(m.id, p);
+    }
+  }
+
+  const families: ProductFamily[] = models.map((m) => ({
+    id: m.id,
+    category: m.category,
+    title: m.title,
+    description: '',
+    images: photosByModel.get(m.id)?.cover ?? [],
+    imagesByColor: photosByModel.get(m.id)?.byColor ?? {},
+    popularity_score: m.sort,
+    created_at: m.created_at,
+  }));
+
+  return { families, variants };
+}
+
+function catalog() {
+  if (!cache) cache = loadCatalog().catch((e) => { cache = null; throw e; });
+  return cache;
 }
 
 export async function fetchFamilies(): Promise<ProductFamily[]> {
-  if (!supabase) return mockFamilies;
-  const { data, error } = await supabase
-    .from('product_families')
-    .select('*')
-    .order('popularity_score', { ascending: false });
-  if (error) {
-    console.error('fetchFamilies error', error);
-    return mockFamilies;
-  }
-  return (data as ProductFamily[]).map((f) => {
-    const { images, imagesByColor } = normalizeFamilyImages((f as any).images);
-    return { ...f, category: normalizeCategory(f.category), images, imagesByColor };
-  });
+  return (await catalog()).families;
 }
 
 export async function fetchVariants(): Promise<Variant[]> {
-  if (!supabase) return mockVariants;
-  const { data, error } = await supabase.from('variants').select('*');
-  if (error) {
-    console.error('fetchVariants error', error);
-    return mockVariants;
-  }
-  return data as Variant[];
-}
-
-export async function fetchFamilyById(id: string): Promise<ProductFamily | null> {
-  if (!supabase) return mockFamilies.find((f) => f.id === id) ?? null;
-  const { data, error } = await supabase
-    .from('product_families')
-    .select('*')
-    .eq('id', id)
-    .single();
-  if (error) return null;
-  const f = data as ProductFamily;
-  const { images, imagesByColor } = normalizeFamilyImages((f as any).images);
-  return { ...f, category: normalizeCategory(f.category), images, imagesByColor };
-}
-
-export async function fetchVariantsByFamily(familyId: string): Promise<Variant[]> {
-  if (!supabase) return mockVariants.filter((v) => v.family_id === familyId);
-  const { data, error } = await supabase
-    .from('variants')
-    .select('*')
-    .eq('family_id', familyId);
-  if (error) return [];
-  return data as Variant[];
+  return (await catalog()).variants;
 }

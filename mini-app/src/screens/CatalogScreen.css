@@ -109,6 +109,10 @@
   color: var(--color-out-text);
 }
 
+.catalog-model-ask {
+  color: var(--color-ask-text);
+}
+
 .catalog-model-btn:active {
   background: var(--color-primary-light);
 }

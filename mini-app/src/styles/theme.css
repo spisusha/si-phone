@@ -25,6 +25,8 @@
   --p-stock-text: #287A33;
   --p-out-bg: #fdecea;
   --p-out-text: #c4281c;
+  --p-ask-bg: #fff1e0;
+  --p-ask-text: #b35400;
   --p-shadow-card: 0 1px 4px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
   --p-shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.10);
 
@@ -70,6 +72,8 @@ html[data-scheme='dark'] {
   --p-stock-text: #8fe36a;
   --p-out-bg: rgba(255, 69, 58, 0.18);
   --p-out-text: #ff6961;
+  --p-ask-bg: rgba(255, 159, 10, 0.18);
+  --p-ask-text: #ffb340;
   --p-shadow-card: none;
   --p-shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
@@ -88,6 +92,8 @@ html[data-scheme='dark'] {
   --color-stock-text: var(--p-stock-text);
   --color-out-bg: var(--p-out-bg);
   --color-out-text: var(--p-out-text);
+  --color-ask-bg: var(--p-ask-bg);
+  --color-ask-text: var(--p-ask-text);
   --shadow-card: var(--p-shadow-card);
   --shadow-elevated: var(--p-shadow-elevated);
 }

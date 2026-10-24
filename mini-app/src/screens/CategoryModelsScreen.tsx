@@ -46,7 +46,7 @@ export default function CategoryModelsScreen() {
 
 
   const stats = useMemo(() => {
-    const map = new Map<string, { minPrice: number; totalCount: number; inStockCount: number; image: string }>();
+    const map = new Map<string, ModelStats>();
     for (const f of models) {
       const fvRaw = variants.filter((v) => v.family_id === f.id);
       const seen = new Map<string, typeof fvRaw[0]>();
@@ -62,14 +62,15 @@ export default function CategoryModelsScreen() {
       // Картинка модели: обложка, а если её нет — фото первого варианта в наличии
       const withPhoto = [...inStock, ...fv].find((v) => getDisplayImages(v, f).length > 0);
       const image = withPhoto ? getDisplayImages(withPhoto, f)[0] : getFirstImage(null, f);
-      map.set(f.id, { minPrice, totalCount: pricePool.length, inStockCount: inStock.length, image });
+      const askCount = fv.filter((v) => v.status === 'уточнить').length;
+      map.set(f.id, { minPrice, totalCount: pricePool.length, inStockCount: inStock.length, askCount, image });
     }
     return map;
   }, [models, variants]);
 
   // В списке: сначала модели в наличии, среди них — от флагманов к простым (по цене «от»).
   const orderedModels = useMemo(() => {
-    const st = (id: string) => stats.get(id) ?? { minPrice: 0, totalCount: 0, inStockCount: 0, image: '' };
+    const st = (id: string) => stats.get(id) ?? { minPrice: 0, totalCount: 0, inStockCount: 0, askCount: 0, image: '' };
     return [...models].sort((a, b) => {
       const sa = st(a.id), sb = st(b.id);
       if ((sa.inStockCount > 0) !== (sb.inStockCount > 0)) return sa.inStockCount > 0 ? -1 : 1;
@@ -96,7 +97,7 @@ export default function CategoryModelsScreen() {
     });
   }, [isAirpods, models, variants]);
 
-  const maxFamily = isAirpods ? models.find((f) => /max/i.test(f.title)) : null;
+  const maxFamilies = isAirpods ? models.filter((f) => /max/i.test(f.title)) : [];
 
   if (loading) return <ListSkeleton rows={6} />;
   if (failed) return <CatalogFailed />;
@@ -115,12 +116,15 @@ export default function CategoryModelsScreen() {
 
       {isAirpods ? (
         <>
-          {maxFamily && (
+          {maxFamilies.length > 0 && (
             <div className="product-grid" style={{ marginBottom: 12 }}>
-              <ProductCard
-                family={maxFamily}
-                variants={variants.filter((v) => v.family_id === maxFamily.id)}
-              />
+              {maxFamilies.map((mf) => (
+                <ProductCard
+                  key={mf.id}
+                  family={mf}
+                  variants={variants.filter((v) => v.family_id === mf.id)}
+                />
+              ))}
             </div>
           )}
           <div className="product-grid">
@@ -130,7 +134,7 @@ export default function CategoryModelsScreen() {
               return <ProductCard key={v.id} family={fam} variants={[v]} skuVariant={v} />;
             })}
           </div>
-          {airpodsCards.length === 0 && !maxFamily && (
+          {airpodsCards.length === 0 && maxFamilies.length === 0 && (
             <ManagerHint title="Сейчас AirPods нет на витрине" text="Напишите менеджеру — он проверит, что есть на складе." />
           )}
         </>
@@ -155,9 +159,11 @@ export default function CategoryModelsScreen() {
   );
 }
 
+interface ModelStats { minPrice: number; totalCount: number; inStockCount: number; askCount: number; image: string }
+
 function ModelCard({ family, stats, onClick }: {
   family: ProductFamily;
-  stats: { minPrice: number; totalCount: number; inStockCount: number; image: string };
+  stats: ModelStats;
   onClick: () => void;
 }) {
   let priceText: string;
@@ -168,7 +174,8 @@ function ModelCard({ family, stats, onClick }: {
   } else {
     priceText = `от ${stats.minPrice.toLocaleString('ru-RU')} ₽`;
   }
-  const outOfStock = stats.inStockCount === 0;
+  const askOnly = stats.inStockCount === 0 && stats.askCount > 0;
+  const outOfStock = stats.inStockCount === 0 && !askOnly;
 
   return (
     <button className={`catalog-model-btn${outOfStock ? ' catalog-model-btn--out' : ''}`} onClick={onClick}>
@@ -180,6 +187,7 @@ function ModelCard({ family, stats, onClick }: {
         <span className="catalog-model-sub">
           {priceText}
           {outOfStock && <span className="catalog-model-out"> · нет в наличии</span>}
+          {askOnly && <span className="catalog-model-ask"> · цену уточняйте</span>}
         </span>
       </div>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-muted)" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>

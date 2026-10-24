@@ -4,6 +4,7 @@ import { getMinPrice, hasStock } from '../domain/catalogLogic';
 import { formatWatchDisplay } from '../domain/watchFormat';
 import { getFirstImage } from '../domain/imageUtils';
 import { formatStorage } from '../domain/variantFormat';
+import StockBadge, { stockState } from './StockBadge';
 import './ProductCard.css';
 
 function buildSkuSubtitle(v: Variant, category: Category): string {
@@ -45,7 +46,9 @@ export default function ProductCard({ family, variants, skuVariant }: Props) {
   if (skuVariant) {
     const isWatch = family.category === 'Watch';
     let title: string;
-    if (isWatch) {
+    if (isWatch && skuVariant.name) {
+      title = skuVariant.name.replace(/^Apple\s+/, '');
+    } else if (isWatch) {
       const raw = skuVariant.options.supplierTitle || skuVariant.options.raw || '';
       title = formatWatchDisplay(raw).longTitle || family.title;
     } else {
@@ -70,9 +73,7 @@ export default function ProductCard({ family, variants, skuVariant }: Props) {
             <span className="product-card__price">
               {skuVariant.price.toLocaleString('ru-RU')} ₽
             </span>
-            <span className={`badge ${skuVariant.in_stock ? 'badge-stock' : 'badge-out'}`}>
-              {skuVariant.in_stock ? 'В наличии' : 'Нет в наличии'}
-            </span>
+            <StockBadge state={stockState([skuVariant])} />
           </div>
         </div>
       </div>
@@ -100,9 +101,7 @@ export default function ProductCard({ family, variants, skuVariant }: Props) {
           ) : (
             <span className="product-card__price product-card__price--ask">Цена по запросу</span>
           )}
-          <span className={`badge ${inStock ? 'badge-stock' : 'badge-out'}`}>
-            {inStock ? 'В наличии' : 'Нет в наличии'}
-          </span>
+          <StockBadge state={inStock ? 'stock' : stockState(variants.filter((v) => v.family_id === family.id))} />
         </div>
       </div>
     </div>

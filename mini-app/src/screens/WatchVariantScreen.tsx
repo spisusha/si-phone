@@ -5,6 +5,7 @@ import { formatWatchDisplay } from '../domain/watchFormat';
 import { getDisplayImages } from '../domain/imageUtils';
 import { DetailSkeleton } from '../components/Skeleton';
 import AddToCart from '../components/AddToCart';
+import StockBadge, { stockState } from '../components/StockBadge';
 import { hasNativeBackButton } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
 import { CatalogFailed, NotFound } from '../components/EmptyState';
@@ -32,7 +33,12 @@ export default function SkuVariantScreen() {
 
   let title: string;
   let subtitleParts: string[] = [];
-  if (isWatch) {
+  if (isWatch && variant.options.band) {
+    // Каталог v2: размер, корпус и ремешок уже разложены по колонкам таблицы
+    title = family.title;
+    const size = String(variant.options.size || '').replace(/mm$/, ' мм');
+    subtitleParts = [size, ...String(variant.options.band).split(' / ')].filter(Boolean);
+  } else if (isWatch) {
     const raw = variant.options.supplierTitle || variant.options.raw || '';
     const wd = formatWatchDisplay(raw);
     title = wd.shortTitle || family.title;
@@ -126,14 +132,12 @@ export default function SkuVariantScreen() {
 
       <div className="detail-price-section">
         <span className="detail-price">{variant.price.toLocaleString('ru-RU')} ₽</span>
-        <span className={`badge ${variant.in_stock ? 'badge-stock' : 'badge-out'}`}>
-          {variant.in_stock ? 'В наличии' : 'Нет в наличии'}
-        </span>
+        <StockBadge state={stockState([variant])} />
       </div>
 
       <p className="detail-disclaimer">*Цена и наличие могут меняться</p>
 
-      <AddToCart item={cartItem} inStock={variant.in_stock} />
+      <AddToCart item={cartItem} inStock={variant.in_stock} askManager={variant.status === 'уточнить'} />
     </div>
   );
 }
@@ -146,7 +150,7 @@ function WatchSpecs({ parts }: { parts: string[] }) {
   for (const p of parts) {
     if (/мм$/.test(p)) {
       labels.push(`Размер корпуса: ${p}`);
-    } else if (/Titanium|Space Grey|Jet Black|Rose Gold|Starlight|Midnight|Silver|Slate|Natural|Black|Gold/i.test(p)
+    } else if (/Titanium|Aluminum|Ceramic|Space Gr[ae]y|Jet Black|Rose Gold|Starlight|Midnight|Silver|Slate|Natural|Black|Gold/i.test(p)
       && !/Band|Loop/i.test(p)) {
       labels.push(`Корпус: ${p}`);
     } else if (/Band|Loop/i.test(p)) {

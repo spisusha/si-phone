@@ -4,6 +4,7 @@ import { useCatalogStore } from '../store/catalogStore';
 import { useConfigurator } from '../hooks/useConfigurator';
 import OptionSelector from '../components/OptionSelector';
 import AddToCart from '../components/AddToCart';
+import StockBadge, { stockState } from '../components/StockBadge';
 import { DetailSkeleton } from '../components/Skeleton';
 import { formatStorage } from '../domain/variantFormat';
 import { hasNativeBackButton, haptic } from '../telegram/telegramWebApp';
@@ -137,9 +138,7 @@ export default function ProductDetailScreen() {
         {resolvedVariant ? (
           <>
             <span className="detail-price">{resolvedVariant.price.toLocaleString('ru-RU')} ₽</span>
-            <span className={`badge ${resolvedVariant.in_stock ? 'badge-stock' : 'badge-out'}`}>
-              {resolvedVariant.in_stock ? 'В наличии' : 'Нет в наличии'}
-            </span>
+            <StockBadge state={stockState([resolvedVariant])} />
           </>
         ) : (
           <span className="detail-no-variant">Выберите опции</span>
@@ -148,7 +147,7 @@ export default function ProductDetailScreen() {
 
       <p className="detail-disclaimer">*Цена и наличие могут меняться</p>
 
-      <AddToCart item={cartItem} inStock={!!resolvedVariant?.in_stock} />
+      <AddToCart item={cartItem} inStock={!!resolvedVariant?.in_stock} askManager={resolvedVariant?.status === 'уточнить'} />
     </div>
   );
 }

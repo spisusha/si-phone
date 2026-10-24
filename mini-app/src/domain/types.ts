@@ -18,6 +18,10 @@ export interface Variant {
   sku_code: string;
   images: string[];
   supplier_xmlid?: string;
+  /** Полное название из таблицы каталога: «Apple Watch Series 12 46mm Aluminum Black Black Sport Band» */
+  name?: string;
+  /** «уточнить» — цену и наличие подтверждает менеджер */
+  status?: 'в наличии' | 'уточнить';
   updated_at: string;
 }
 

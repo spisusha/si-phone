@@ -12,7 +12,7 @@ const MAX_POSITIONS = 20;
 const MAX_QTY = 10;
 const LIMIT_10_MIN = 3;
 const LIMIT_DAY = 20;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ITEM_ID_RE = /^[1-9]\d{0,6}$/; // ID товара из таблицы каталога: 1, 2, 3…
 const PHONE_RE = /^[+\d\s()-]{5,32}$/;
 
 interface RequestBody {
@@ -45,26 +45,6 @@ function escapeHtml(s: string): string {
 
 function formatPrice(n: number): string {
   return n.toLocaleString('ru-RU');
-}
-
-function formatStorage(gb: unknown): string {
-  const n = Number(gb);
-  return n >= 1024 ? `${n / 1024} ТБ` : `${n} ГБ`;
-}
-
-// Та же логика, что в src/domain/variantFormat.ts: только понятные покупателю поля.
-function describeOptions(o: Record<string, unknown>): string {
-  const parts: string[] = [];
-  if (o.chip) parts.push(String(o.chip));
-  if (o.memStorage) parts.push(String(o.memStorage));
-  if (o.storage) parts.push(formatStorage(o.storage));
-  const color = o.colorLabel || o.color;
-  if (color) parts.push(String(color));
-  if (o.simType) parts.push(String(o.simType));
-  if (o.connectivity) parts.push(String(o.connectivity));
-  if (o.size) parts.push(String(o.size));
-  if (o.ruKeyboard && String(o.ruKeyboard) !== 'false') parts.push('RU');
-  return parts.join(' · ');
 }
 
 function buildMessage(orderId: string, user: TgUser, lines: OrderLine[], total: number, c: Contacts): string {
@@ -123,7 +103,7 @@ Deno.serve(withCors(async (req) => {
     for (const it of Array.isArray(body.items) ? body.items : []) {
       const id = String(it?.variantId ?? '');
       const qty = Number(it?.qty);
-      if (!UUID_RE.test(id) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) {
+      if (!ITEM_ID_RE.test(id) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) {
         return json({ ok: false, error: 'Некорректная корзина' }, 400);
       }
       qtyById.set(id, Math.min(MAX_QTY, (qtyById.get(id) ?? 0) + qty));
@@ -146,29 +126,23 @@ Deno.serve(withCors(async (req) => {
 
     /* ── 4. цены и наличие — из базы ── */
     const ids = [...qtyById.keys()];
-    const { data: variants, error: vErr } = await sb.from('variants')
-      .select('id, family_id, options, price, in_stock').in('id', ids);
-    if (vErr) throw new Error(`variants: ${vErr.message}`);
-    const familyIds = [...new Set((variants ?? []).map((v) => v.family_id))];
-    const { data: families, error: fErr } = await sb.from('product_families')
-      .select('id, title, category').in('id', familyIds);
-    if (fErr) throw new Error(`families: ${fErr.message}`);
-    const familyById = new Map((families ?? []).map((f) => [f.id, f]));
+    // Каталог v2: товар = строка catalog_items. Позиции «уточнить» и скрытые заказать нельзя —
+    // их цену и наличие сначала подтверждает менеджер.
+    const { data: items, error: iErr } = await sb.from('catalog_items')
+      .select('id, name, price, status, visible').in('id', ids.map(Number));
+    if (iErr) throw new Error(`catalog_items: ${iErr.message}`);
 
     const lines: OrderLine[] = [];
     for (const id of ids) {
-      const v = variants?.find((x) => x.id === id);
-      const fam = v ? familyById.get(v.family_id) : undefined;
-      const price = Number(v?.price);
-      if (!v || !fam || !v.in_stock || !(price > 0)) {
+      const it = items?.find((x) => String(x.id) === id);
+      const price = Number(it?.price);
+      if (!it || !it.visible || it.status !== 'в наличии' || !(price > 0)) {
         return json({ ok: false, code: 'stale_cart', error: 'Часть товаров закончилась или изменилась. Обновите корзину' }, 409);
       }
-      const opts = (v.options ?? {}) as Record<string, unknown>;
-      const isWatch = String(fam.category).toLowerCase() === 'watch';
       lines.push({
         variantId: id,
-        title: isWatch && opts.supplierTitle ? String(opts.supplierTitle) : String(fam.title),
-        options: isWatch ? '' : describeOptions(opts),
+        title: String(it.name), // полное название из таблицы: модель, память, цвет, SIM…
+        options: '',
         price,
         qty: qtyById.get(id)!,
       });

@@ -151,7 +151,8 @@ export function useConfigurator(variants: Variant[], familyImages: string[], fam
 
       result[key] = allVals.filter((val) =>
         !variants.some((v) => {
-          if (!v.in_stock || s(v.options[key]) !== val) return false;
+          // «уточнить» тоже можно выбрать — покупатель увидит оранжевую плашку
+          if (!(v.in_stock || v.status === 'уточнить') || s(v.options[key]) !== val) return false;
           if (colorHex && s(v.options.colorHex) !== colorHex) return false;
 
           if (deps !== undefined) {
