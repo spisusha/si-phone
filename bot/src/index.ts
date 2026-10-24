@@ -187,11 +187,12 @@ export default {
   },
 };
 
-// Отправка приветствия с кнопками
+// Отправка приветствия с кнопками.
+// style: "success" — зелёная кнопка (Bot API, клиенты Telegram с февраля 2026; старые покажут обычную).
 async function sendWelcome(env: Env, chatId: number): Promise<void> {
   const keyboard = {
     inline_keyboard: [
-      [{ text: "📱 Открыть магазин", web_app: { url: env.MINI_APP_URL } }],
+      [{ text: "📱 Открыть магазин", web_app: { url: env.MINI_APP_URL }, style: "success" }],
       [{ text: "⭐ Отзывы", callback_data: "reviews" }, { text: "❓ FAQ", callback_data: "faq" }],
       [{ text: "💬 Поддержка", callback_data: "support" }],
     ],
@@ -505,7 +506,7 @@ async function showReview(env: Env, chatId: number, index: number, messageId?: n
         { text: "Следующий →", callback_data: `reviews_${i + 1}` },
       ],
       [
-        { text: "📱 Открыть магазин", web_app: { url: env.MINI_APP_URL } },
+        { text: "📱 Открыть магазин", web_app: { url: env.MINI_APP_URL }, style: "success" },
         { text: "💬 Поддержка", callback_data: "support" },
       ],
     ],
