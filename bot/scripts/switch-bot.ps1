@@ -23,10 +23,10 @@ $vars = @{}
 Get-Content .dev.vars | ForEach-Object {
   if ($_ -match '^\s*([A-Z_]+)\s*=\s*(.*?)\s*$') { $vars[$matches[1]] = $matches[2].Trim('"') }
 }
-foreach ($k in 'TELEGRAM_BOT_TOKEN', 'GEMINI_API_KEY') {
+foreach ($k in @('TELEGRAM_BOT_TOKEN')) {
   if (-not $vars[$k]) { throw "В .dev.vars нет $k" }
 }
-Write-Host "ok: TELEGRAM_BOT_TOKEN и GEMINI_API_KEY найдены"
+Write-Host "ok: TELEGRAM_BOT_TOKEN найден"
 $token = $vars['TELEGRAM_BOT_TOKEN']
 
 # 2. Админы
@@ -54,7 +54,6 @@ $tmp = Join-Path $env:TEMP ("si-phone-bot-secrets-" + [guid]::NewGuid().ToString
 try {
   @{
     TELEGRAM_BOT_TOKEN = $token
-    GEMINI_API_KEY     = $vars['GEMINI_API_KEY']
     WEBHOOK_SECRET     = $webhookSecret
     ADMIN_CHAT_ID      = $admins
   } | ConvertTo-Json | Set-Content -Path $tmp -Encoding ASCII
@@ -63,7 +62,7 @@ try {
 } finally {
   if (Test-Path $tmp) { Remove-Item $tmp -Force }
 }
-Write-Host "ok: 4 секрета заданы"
+Write-Host "ok: 3 секрета заданы"
 
 # 5. Проверка воркера
 Step "5/6 Проверяю воркер"

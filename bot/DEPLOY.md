@@ -18,7 +18,6 @@ npx wrangler login
 
 ```powershell
 npx wrangler secret put TELEGRAM_BOT_TOKEN
-npx wrangler secret put GEMINI_API_KEY
 npx wrangler secret put WEBHOOK_SECRET   # случайная строка, та же, что $secret в setWebhook
 npx wrangler secret put ADMIN_CHAT_ID    # chat_id админов через запятую
 ```

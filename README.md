@@ -5,7 +5,7 @@ Telegram-магазин оригинальной техники Apple: мини-
 | Папка | Что внутри | Где работает |
 |---|---|---|
 | `mini-app/` | Мини-приложение: React + TypeScript + Vite, каталог, корзина, оформление, админка; серверные функции и миграции Supabase — `mini-app/supabase/` | Vercel (Root Directory — `mini-app`), Supabase |
-| `bot/` | Telegram-бот: кнопка «Открыть магазин», FAQ, отзывы, ответы Gemini | Cloudflare Workers (`si-phone-bot`) |
+| `bot/` | Telegram-бот: кнопка «Открыть магазин», частые вопросы, отзывы, связь с менеджером (без нейросети) | Cloudflare Workers (`si-phone-bot`) |
 
 ## Запуск локально
 
