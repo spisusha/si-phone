@@ -27,6 +27,7 @@ interface RequestBody {
   address?: string;
   phone?: string;
   paymentMethod?: string;
+  consent?: boolean;
 }
 
 interface OrderLine {
@@ -121,7 +122,9 @@ Deno.serve(withCors(async (req) => {
       return json({ ok: false, error: 'Некорректная корзина' }, 400);
     }
 
-    /* ── 3. доставка и контакты ── */
+    /* ── 3. согласие, доставка и контакты ── */
+    // Без отметки «Даю согласие на обработку персональных данных» (152-ФЗ) заказ не принимаем
+    if (body.consent !== true) return json({ ok: false, error: 'Отметьте согласие на обработку персональных данных' }, 400);
     const deliveryMethod = body.deliveryMethod === 'delivery' ? 'delivery' : body.deliveryMethod === 'pickup' ? 'pickup' : null;
     const paymentMethod = body.paymentMethod === 'online' ? 'online' : body.paymentMethod === 'cash' ? 'cash' : null;
     const address = String(body.address ?? '').trim().slice(0, 300);

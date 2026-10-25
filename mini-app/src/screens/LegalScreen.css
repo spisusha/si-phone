@@ -1,0 +1,68 @@
+.legal__back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 12px;
+}
+
+.legal__title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.legal__intro {
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.45;
+  margin: 0 0 16px;
+}
+
+.legal__section {
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.legal__section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.legal__section p,
+.legal__section li {
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.legal__section p { margin: 0 0 8px; }
+.legal__section p:last-child { margin-bottom: 0; }
+
+.legal__section ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.legal__section ul:last-child { margin-bottom: 0; }
+.legal__section li + li { margin-top: 4px; }
+
+.legal__other {
+  font-size: 14px;
+  margin: 14px 0 8px;
+}
+
+.legal__other a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

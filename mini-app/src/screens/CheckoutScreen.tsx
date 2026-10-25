@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api/orderRepo';
 import { cartItemDisplay } from '../domain/variantFormat';
@@ -10,17 +10,33 @@ import { useTelegramMainButton } from '../telegram/hooks';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
 import './CheckoutScreen.css';
 
+// Черновик формы — только в памяти этой вкладки на устройстве покупателя (sessionStorage):
+// открыл согласие или политику, вернулся — адрес и телефон на месте. На сервер не уходит.
+const DRAFT_KEY = 'checkoutDraft';
+interface Draft { delivery: DeliveryMethod; payment: PaymentMethod; address: string; phone: string; consent: boolean }
+function readDraft(): Partial<Draft> {
+  try { return JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? '{}') ?? {}; } catch { return {}; }
+}
+
 export default function CheckoutScreen() {
   const { items, total, clear } = useCartStore();
   const navigate = useNavigate();
+  const [draft] = useState(readDraft);
 
-  const [delivery, setDelivery] = useState<DeliveryMethod>('pickup');
-  const [payment, setPayment] = useState<PaymentMethod>('cash');
+  const [delivery, setDelivery] = useState<DeliveryMethod>(draft.delivery === 'delivery' ? 'delivery' : 'pickup');
+  const [payment, setPayment] = useState<PaymentMethod>(draft.payment === 'online' ? 'online' : 'cash');
   // Доставка — только переводом: чтобы не было «привезли, а наличными передумал платить» (Роман, 23.10.2026).
   const cashAllowed = delivery === 'pickup';
   const paymentMethod: PaymentMethod = cashAllowed ? payment : 'online';
-  const [address, setAddress] = useState('');
-  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState(String(draft.address ?? ''));
+  const [phone, setPhone] = useState(String(draft.phone ?? ''));
+  // Согласие на обработку персональных данных (152-ФЗ): по умолчанию не отмечено
+  const [consent, setConsent] = useState(draft.consent === true);
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ delivery, payment, address, phone, consent } satisfies Draft));
+    } catch { /* приватный режим — просто без черновика */ }
+  }, [delivery, payment, address, phone, consent]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,6 +45,11 @@ export default function CheckoutScreen() {
     if (delivery === 'delivery' && !address.trim()) {
       haptic('error');
       setError('Укажите адрес доставки');
+      return;
+    }
+    if (!consent) {
+      haptic('error');
+      setError('Отметьте согласие на обработку персональных данных');
       return;
     }
     setError('');
@@ -40,6 +61,7 @@ export default function CheckoutScreen() {
       address: delivery === 'delivery' ? address.trim() : undefined,
       phone: phone.trim() || undefined,
       paymentMethod,
+      consent: true,
     });
     setSubmitting(false);
 
@@ -64,6 +86,7 @@ export default function CheckoutScreen() {
     const resultState = { payload, orderId: result.orderId };
     haptic('success');
     sessionStorage.setItem('lastOrder', JSON.stringify(resultState));
+    try { sessionStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
     clear();
     navigate('/result', { state: resultState, replace: true });
   };
@@ -178,6 +201,23 @@ export default function CheckoutScreen() {
         </div>
       </div>
       <p className="tg-section-footer">Цену и наличие менеджер подтвердит после заказа.</p>
+
+      <div className="tg-group checkout-consent">
+        <label className="tg-row checkout-consent__row">
+          <input
+            type="checkbox"
+            className="checkout-consent__box"
+            checked={consent}
+            onChange={(e) => { haptic('select'); setConsent(e.target.checked); if (e.target.checked && error) setError(''); }}
+          />
+          <span className="tg-row__main checkout-consent__text">
+            Даю <Link to="/consent" className="legal-link">согласие на обработку персональных данных</Link>
+          </span>
+        </label>
+      </div>
+      <p className="tg-section-footer">
+        Как мы обращаемся с данными — в <Link to="/privacy" className="legal-link">Политике обработки персональных данных</Link>.
+      </p>
 
       {error && <p className="checkout-error" role="alert">{error}</p>}
 

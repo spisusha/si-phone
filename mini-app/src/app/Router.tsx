@@ -11,6 +11,7 @@ import CartScreen from '../screens/CartScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import OrderResultScreen from '../screens/OrderResultScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import LegalScreen from '../screens/LegalScreen';
 import Loader from '../components/Loader';
 
 // Админка грузится отдельно — покупатель её не скачивает.
@@ -24,6 +25,7 @@ function parentPath(pathname: string): string {
   const parts = pathname.split('/').filter(Boolean);
   if (parts[0] === 'catalog') return '/' + parts.slice(0, -1).join('/');
   if (parts[0] === 'checkout') return '/cart';
+  if (parts[0] === 'privacy' || parts[0] === 'consent') return '/profile';
   return '/';
 }
 
@@ -69,6 +71,8 @@ function Layout() {
           <Route path="/checkout" element={<CheckoutScreen />} />
           <Route path="/result" element={<OrderResultScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
+          <Route path="/privacy" element={<LegalScreen doc="privacy" />} />
+          <Route path="/consent" element={<LegalScreen doc="consent" />} />
           <Route path="/admin/*" element={<AdminScreen />} />
         </Routes>
       </Suspense>

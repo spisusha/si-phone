@@ -171,3 +171,7 @@
 .profile-contact-value {
   color: var(--color-muted);
 }
+
+.profile-legal {
+  margin-top: 16px;
+}

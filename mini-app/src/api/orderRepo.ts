@@ -10,6 +10,8 @@ export interface CreateOrderRequest {
   address?: string;
   phone?: string;
   paymentMethod: PaymentMethod;
+  /** Покупатель отметил согласие на обработку персональных данных (152-ФЗ) */
+  consent: true;
 }
 
 export interface ServerOrderLine {

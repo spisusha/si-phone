@@ -47,3 +47,29 @@
 .checkout .btn-block {
   margin-top: 20px;
 }
+
+/* Согласие на обработку персональных данных */
+.checkout-consent {
+  margin-top: 16px;
+}
+
+.checkout-consent__row {
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.checkout-consent__box {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.checkout-consent__row .checkout-consent__text {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+}

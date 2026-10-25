@@ -132,3 +132,11 @@ a.tg-row:active,
 button.tg-row:active {
   background: var(--color-bg);
 }
+
+/* Ссылка в тексте (согласие, политика) */
+.legal-link {
+  display: inline;
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
