@@ -35,8 +35,17 @@ function useTelegramBackButton(pathname: string) {
     if (ROOT_PATHS.has(pathname) || pathname.startsWith('/admin')) return;
     return showBackButton(() => {
       const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-      if (idx > 0) navigate(-1);
-      else navigate(parentPath(pathname), { replace: true });
+      if (idx <= 0) {
+        navigate(parentPath(pathname), { replace: true });
+        return;
+      }
+      // Шаг назад по истории; если WebView Telegram его не отработал (экран не сменился) —
+      // уходим на уровень выше по адресу (каталог: …/iPhone 18/Duo → …/iPhone 18 → …). Роман, 25.10.2026.
+      const before = window.location.pathname;
+      navigate(-1);
+      window.setTimeout(() => {
+        if (window.location.pathname === before) navigate(parentPath(before), { replace: true });
+      }, 350);
     });
   }, [pathname, navigate]);
 }

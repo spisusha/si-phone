@@ -13,8 +13,9 @@ export function modelPlace(f: ProductFamily): ModelPlace {
   const t = f.title.replace(/^Apple\s+/, '');
   switch (f.category) {
     case 'iPhone': {
-      // Air вышел вместе с 17-м, Duo — вместе с 18-м
-      const n = /^iPhone (\d+)/.exec(t)?.[1] ?? (/Air/.test(t) ? '17' : /Duo/.test(t) ? '18' : '');
+      // Duo и Air — отдельные плашки, а не «внутри» 18-го и 17-го (Роман, 25.10.2026): это свои модели.
+      // Порядок — по таблице каталога: Duo самый верхний, Air — рядом с 17-м.
+      const n = /^iPhone (\d+)/.exec(t)?.[1];
       return { gen: n ? `iPhone ${n}` : t, line: t.replace(/^iPhone\s+/, '') };
     }
     case 'MacBook': {
