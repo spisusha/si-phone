@@ -162,6 +162,14 @@ Deno.serve(withCors(async (req: Request) => {
         if (it.keyboard === 'РУС') own.push('рус', 'ру клавиатура', 'гравировка', 'кл');
         if (it.band) own.push(String(it.band).toLowerCase().replace(' / ', ', '));
         const synonyms = [...new Set([...common, ...own])].join(', ');
+        // Фото новой позиции — те же правила, что в set-photos: только наше хранилище и безопасное имя файла
+        const photoBase = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/products/catalog/`;
+        if (it.photo_url != null && it.photo_url !== '') {
+          const u = String(it.photo_url);
+          if (!u.startsWith(photoBase) || !/^[a-z0-9-]{3,100}\.(webp|png)\?v=\d+$/.test(u.slice(photoBase.length))) {
+            return json({ error: 'Неверный адрес фото' }, 400);
+          }
+        }
         const { data, error } = await sb.rpc('admin_add_item', { p: { ...it, name, synonyms }, p_who: who });
         if (error) return json({ error: error.message }, 400);
         return json({ ok: true, id: data });
