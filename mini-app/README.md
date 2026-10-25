@@ -41,4 +41,3 @@ brand/splash/   экран загрузки для BotFather
 
 - **Сайт** — Cloudflare Pages, проект `si-phone` (https://si-phone.pages.dev): `npm run build`, затем `npx wrangler pages deploy dist --project-name si-phone --branch main` (из папки `mini-app`, wrangler — из `bot/`). Вместе с сайтом выкладывается `functions/api/catalog.ts` — каталог из кэша (обновление раз в минуту; секрет проекта `SUPABASE_ANON_KEY`). Заголовки безопасности — `public/_headers`.
 - **Функции Supabase** — `npx supabase functions deploy <имя> --no-verify-jwt` (подпись проверяет сама функция). Разрешённые адреса сайта — секрет `ALLOWED_ORIGINS`.
-- Старые адреса на Vercel (`si-phone.vercel.app`, `mini-app-andrew.vercel.app`) перенаправляют на новый (`vercel.json`).

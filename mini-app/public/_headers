@@ -1,4 +1,4 @@
-# Заголовки безопасности для Cloudflare Pages (те же, что были в vercel.json)
+# Заголовки безопасности для Cloudflare Pages
 /*
   Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
   Content-Security-Policy: default-src 'self'; script-src 'self' https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://zudohmttvlibpugravgb.supabase.co https://t.me https://*.t.me https://telegram.org https://*.telegram.org https://*.telegram-cdn.org; connect-src 'self' https://zudohmttvlibpugravgb.supabase.co; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org
