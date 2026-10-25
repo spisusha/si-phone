@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
 import { fingerprint } from '../_shared/privacy.ts';
 import { signAdminToken, signDeviceToken, verifyDeviceToken } from '../_shared/adminAuth.ts';

@@ -22,20 +22,6 @@
 <p id="hint">Сейчас откроется звонок</p>
 <a class="call" id="call" href="#">Позвонить</a>
 <p>Потом закройте эту страницу — магазин останется открытым в Telegram.</p>
-<script>
-  // Звонить можно только на номера магазина — страницу нельзя использовать для чужих номеров.
-  var PHONES = { '+79164050444': '+7 916 405-04-44', '+79252010234': '+7 925 201-02-34' };
-  var to = new URLSearchParams(location.search).get('to') || '';
-  var label = PHONES[to];
-  var link = document.getElementById('call');
-  if (label) {
-    link.href = 'tel:' + to;
-    link.textContent = 'Позвонить ' + label;
-    location.href = 'tel:' + to;
-  } else {
-    document.getElementById('hint').textContent = 'Номер не найден';
-    link.style.display = 'none';
-  }
-</script>
+<script src="/call.js"></script>
 </body>
 </html>

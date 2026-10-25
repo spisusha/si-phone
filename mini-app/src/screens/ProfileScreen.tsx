@@ -56,6 +56,7 @@ export default function ProfileScreen() {
           <p className="profile-about__lead">Оригинальные гаджеты по сифанутым ценам 🤙</p>
           <p className="profile-about__note">Цены меняются ежедневно ‼️</p>
           <p>iPhone, MacBook, iPad, Watch, AirPods. Если не нашли интересующий товар — обращайтесь в личном порядке 🙌</p>
+          <p>Техника новая, оригинальная. Гарантию и её условия уточняйте у менеджера.</p>
         </div>
       </div>
 
