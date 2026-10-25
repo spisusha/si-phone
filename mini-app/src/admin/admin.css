@@ -1,0 +1,111 @@
+/* Админка — в стиле самого магазина: плоские плашки по уровням, зелёные кнопки, светлая схема */
+
+.adm { padding-bottom: 40px; }
+.adm .catalog-header { margin-bottom: 14px; }
+.adm-sub { font-size: var(--fs-sub); color: var(--color-muted); margin: -6px 0 14px; }
+.adm-who { font-size: var(--fs-foot); color: var(--color-muted); margin-bottom: 14px; }
+
+.adm-icon {
+  width: 52px; height: 52px; flex-shrink: 0; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-primary-light); color: var(--color-accent);
+}
+
+.adm-card {
+  background: var(--color-surface); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+}
+.adm-card h2 { font-size: var(--fs-body); margin-bottom: 6px; }
+.adm-card p { font-size: var(--fs-sub); color: var(--color-muted); line-height: 1.4; }
+.adm-big { font-size: 22px; font-weight: 700; color: var(--color-text); }
+
+.adm-section { font-size: var(--fs-foot); font-weight: 600; color: var(--color-muted); text-transform: uppercase;
+  letter-spacing: .03em; margin: 18px 4px 8px; }
+
+.adm-search {
+  width: 100%; padding: 12px 14px; border-radius: var(--radius-md); border: 1.5px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text); font-size: 16px; margin-bottom: 14px; outline: none;
+}
+.adm-search:focus { border-color: var(--color-primary); }
+
+/* строка позиции */
+.adm-item {
+  width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+  background: var(--color-surface); border: none; border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 6px;
+  cursor: pointer; color: var(--color-text);
+}
+.adm-item:active { transform: scale(0.99); }
+.adm-item img { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: var(--color-media-bg); flex-shrink: 0; }
+.adm-item__main { flex: 1; min-width: 0; }
+.adm-item__name { font-size: var(--fs-sub); font-weight: 600; line-height: 1.3; }
+.adm-item__meta { font-size: var(--fs-foot); color: var(--color-muted); margin-top: 2px; }
+.adm-item__price { font-size: var(--fs-sub); font-weight: 700; white-space: nowrap; }
+
+.adm-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 99px; margin-left: 6px; vertical-align: 1px; }
+.adm-tag--ask { background: var(--color-ask-bg); color: var(--color-ask-text); }
+.adm-tag--hidden { background: var(--color-border); color: var(--color-muted); }
+.adm-tag--fresh { background: var(--color-stock-bg); color: var(--color-stock-text); }
+
+/* формы */
+.adm-field { margin-bottom: 16px; }
+.adm-label { display: block; font-size: var(--fs-foot); font-weight: 600; color: var(--color-muted); margin-bottom: 6px; }
+.adm-input, .adm-textarea, .adm-select {
+  width: 100%; padding: 12px 14px; border: 1.5px solid var(--color-border); border-radius: var(--radius-sm);
+  background: var(--color-surface); color: var(--color-text); font-size: 16px; outline: none; font-family: inherit;
+}
+.adm-input:focus, .adm-textarea:focus, .adm-select:focus { border-color: var(--color-primary); }
+.adm-textarea { min-height: 180px; resize: vertical; font-size: 14px; line-height: 1.45; }
+.adm-hint { font-size: var(--fs-foot); color: var(--color-muted); margin-top: 6px; }
+.adm-hint b { color: var(--color-text); }
+
+.adm-seg { display: flex; gap: 8px; }
+.adm-seg button {
+  flex: 1; min-height: 44px; border-radius: var(--radius-sm); border: 1.5px solid var(--color-border);
+  background: var(--color-surface); color: var(--color-text); font-weight: 600; font-size: var(--fs-sub); cursor: pointer;
+}
+.adm-seg button.on { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-on-primary); }
+.adm-seg button.on-ask { background: var(--color-ask-bg); border-color: var(--color-ask-text); color: var(--color-ask-text); }
+
+.adm-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-pct { display: flex; align-items: center; gap: 8px; }
+.adm-pct .adm-input { text-align: right; }
+.adm-pct span { font-weight: 600; color: var(--color-muted); }
+
+.adm-actions { display: flex; gap: 10px; margin-top: 8px; }
+.adm-actions .btn { flex: 1; min-height: 48px; }
+.adm .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-ghost { background: var(--color-surface); color: var(--color-text); border: 1.5px solid var(--color-border); }
+
+.adm-ok { background: var(--color-stock-bg); color: var(--color-stock-text); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; margin-bottom: 12px; }
+.adm-err { background: var(--color-out-bg); color: var(--color-out-text); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 14px; margin-bottom: 12px; }
+
+/* загрузка прайса */
+.adm-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.adm-summary span { font-size: 13px; font-weight: 600; padding: 6px 10px; border-radius: 99px; background: var(--color-surface); }
+.adm-line {
+  display: flex; gap: 10px; align-items: flex-start; background: var(--color-surface); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin-bottom: 6px; font-size: 14px;
+}
+.adm-line input[type='checkbox'] { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--color-primary); flex-shrink: 0; }
+.adm-line__main { flex: 1; min-width: 0; }
+.adm-line__src { font-size: 12px; color: var(--color-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-line__name { font-weight: 600; margin: 2px 0; }
+.adm-line__price { font-size: 13px; }
+.adm-up { color: var(--color-out-text); font-weight: 600; }
+.adm-down { color: var(--color-stock-text); font-weight: 600; }
+.adm-warn { color: var(--color-ask-text); font-weight: 600; }
+.adm-line .adm-select { padding: 8px 10px; font-size: 14px; margin-top: 4px; }
+
+.adm-file { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+.adm-file label { cursor: pointer; }
+
+.adm-sticky {
+  position: sticky; bottom: 0; padding: 12px 0 calc(12px + var(--safe-bottom)); background: linear-gradient(to bottom, transparent, var(--color-bg) 30%);
+}
+
+/* история */
+.adm-hist { background: var(--color-surface); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 6px; font-size: 14px; }
+.adm-hist__top { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--color-muted); margin-bottom: 2px; }
+.adm-hist__what { line-height: 1.35; }
+
+.adm-rates { font-size: 13px; color: var(--color-muted); margin-top: 8px; line-height: 1.6; }

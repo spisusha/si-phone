@@ -43,8 +43,9 @@ export default function HomeScreen() {
       case 'price_desc':
         return [...all].sort((a, b) => price(b.minPrice, 0) - price(a.minPrice, 0));
       default:
-        // «Популярные» и «Новинки»: порядок таблицы каталога (новые модели выше), «уточнить» — в конце
-        return [...all].sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state]);
+        // «Популярные» и «Новинки»: сначала позиции со свежей ценой из прайса (2 дня), дальше порядок таблицы
+        // каталога (новые модели выше), «уточнить» — в конце
+        return [...all].sort((a, b) => Number(b.fresh) - Number(a.fresh) || STATE_RANK[a.state] - STATE_RANK[b.state]);
     }
   }, [families, variants, category, sort]);
 

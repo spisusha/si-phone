@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { lockLightTheme } from '../telegram/theme';
+import { getInitData } from '../telegram/telegramWebApp';
+import { adminCall, type AdminAuth } from '../admin/api';
+import AdminApp from '../admin/AdminApp';
 import './AdminScreen.css';
 
-// Админка. Старые вкладки «Цены» (загрузка XLSX) и «Медиа» убраны 24.10.2026 вместе со старым каталогом.
-// Новая админка (поиск товара, цена в строке, наценки, фото) — этап B3. Пока здесь только вход.
+// Админка (этап B3): вход здесь, сами экраны — в src/admin/.
 
 const BASE = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -77,29 +79,44 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 export default function AdminScreen() {
   // Админка свёрстана под светлую схему — держим её светлой и в тёмном Telegram.
   useEffect(() => lockLightTheme(), []);
-  const [authed, setAuthed] = useState(() => !!getAuth());
 
-  const handleLogout = () => {
+  // В Telegram — вход по аккаунту (сервер проверяет подпись и ID в списке админов), без пароля.
+  // В браузере или если аккаунта нет в списке — вход по паролю.
+  const [auth, setAuth] = useState<AdminAuth | null>(() => {
+    const a = getAuth();
+    return a ? { kind: 'password', token: a.token } : null;
+  });
+  const [checkingTg, setCheckingTg] = useState(() => !getAuth() && !!getInitData());
+  const [tgDenied, setTgDenied] = useState(false);
+
+  useEffect(() => {
+    if (!checkingTg) return;
+    const tg: AdminAuth = { kind: 'tg', initData: getInitData() };
+    adminCall<{ who: string }>(tg, 'whoami')
+      .then(() => setAuth(tg))
+      .catch(() => setTgDenied(true))
+      .finally(() => setCheckingTg(false));
+  }, [checkingTg]);
+
+  const handleLogout = useCallback(() => {
     localStorage.removeItem(LS_TOKEN);
     localStorage.removeItem(LS_EXPIRES);
-    setAuthed(false);
-  };
+    setAuth(null);
+  }, []);
 
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
+  if (checkingTg) return <div className="page admin-page admin-login"><p>Проверяю доступ…</p></div>;
+  if (!auth) {
+    return (
+      <>
+        {tgDenied && <p className="admin-error" style={{ margin: '16px' }}>Вашего Telegram нет в списке админов — войдите по паролю</p>}
+        <LoginScreen onLogin={() => { const a = getAuth(); if (a) setAuth({ kind: 'password', token: a.token }); }} />
+      </>
+    );
+  }
 
   return (
-    <div className="page admin-page">
-      <div className="admin-topbar">
-        <h1 className="page-title">Админка</h1>
-        <button className="btn btn-outline admin-topbar__logout" onClick={handleLogout}>Выйти</button>
-      </div>
-      <div className="admin-soon">
-        <h2>Скоро — новая админка</h2>
-        <p>
-          Цены и фото будут здесь: поиск товара, цена прямо в строке, наценки и курс, загрузка фото.
-          Каталог уже работает на новой базе, цены пересчитываются по курсу ЦБ сами.
-        </p>
-      </div>
-    </div>
+    <Suspense fallback={<div className="page admin-page"><p>Загружаю…</p></div>}>
+      <AdminApp auth={auth} logout={auth.kind === 'password' ? handleLogout : null} onDenied={handleLogout} />
+    </Suspense>
   );
 }

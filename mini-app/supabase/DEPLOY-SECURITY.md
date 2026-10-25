@@ -24,12 +24,14 @@ npx supabase secrets set ALLOWED_ORIGINS=https://si-phone.vercel.app
 ```
 npx supabase db push
 ```
-Функции (все проверяют доступ сами, поэтому `--no-verify-jwt`):
+Функции (все проверяют доступ сами, поэтому `--no-verify-jwt`; с 25.10.2026 их три):
 ```
-npx supabase functions deploy create-order admin-login media-sign-upload update-prices media-upload-and-apply media-remove-image media-clear-color media-set-family-cover media-watch-apply media-watch-clear media-watch-remove --no-verify-jwt
-npx supabase functions delete admin-setup
-npx supabase functions delete send-order-telegram
+npx supabase functions deploy create-order admin-login admin-catalog --no-verify-jwt
 ```
+- `create-order` — заказ: подпись Telegram, цены из `catalog_items`, лимиты.
+- `admin-login` — вход в админку по паролю (лимиты попыток).
+- `admin-catalog` — админка: в Telegram — подпись + ID из `TELEGRAM_ADMIN_CHAT_IDS`, в браузере — токен `admin-login`. Менять данные — только через функции базы `admin_*` (проверка значений и история «кто и когда»).
+Старые `update-prices`, `media-*`, `admin-setup`, `send-order-telegram` удалены (24.10.2026).
 После — открыть Supabase → Advisors → Security: ошибок уровня ERROR быть не должно.
 
 ## 2. Фронтенд

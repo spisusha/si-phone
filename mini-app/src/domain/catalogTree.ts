@@ -39,6 +39,28 @@ export function modelPlace(f: ProductFamily): ModelPlace {
   }
 }
 
+/** Подпись плашки первого уровня: «iPhone 17», «MacBook M5», «Apple Watch Ultra» */
+export function genTitle(cat: Category, gen: string): string {
+  switch (cat) {
+    case 'iPhone': return gen;
+    case 'MacBook': return gen === 'Neo' ? 'MacBook Neo' : `MacBook ${gen}`;
+    case 'iPad': return `iPad ${gen}`;
+    case 'Watch': return `Apple Watch ${gen}`;
+    case 'AirPods': return 'AirPods';
+  }
+}
+
+/** Подпись плашки второго уровня: «iPhone 17 Pro», «MacBook Air M5», «Apple Watch Ultra 3» */
+export function lineTitle(cat: Category, gen: string, line: string): string {
+  switch (cat) {
+    case 'iPhone': return line.startsWith('iPhone') ? line : `iPhone ${line}`;
+    case 'MacBook': return line === 'MacBook Neo' ? line : `${line} ${gen}`;
+    case 'iPad': return `${line} ${gen}`;
+    case 'Watch': return `Apple Watch ${line}`;
+    case 'AirPods': return line;
+  }
+}
+
 export interface Tab { id: string; families: ProductFamily[] }
 
 /** Вкладки по порядку: новые (больше popularity_score = выше в таблице каталога) — первыми. */
@@ -62,7 +84,10 @@ export interface ColorCardData {
   several: boolean;   // несколько конфигураций — пишем «от»
   state: StockState;
   href: string;
+  fresh: boolean;     // цену подтвердили за последние 2 дня — выше на главной (решение Романа)
 }
+
+const FRESH_MS = 2 * 24 * 3600 * 1000;
 
 // «Apple» в названии не повторяем, кроме часов: «Apple Watch» — это и есть название
 const stripApple = (s: string) => (/^Apple Watch/.test(s) ? s : s.replace(/^Apple\s+/, ''));
@@ -108,6 +133,7 @@ export function buildColorCards(families: ProductFamily[], variants: Variant[]):
         minPrice: prices.length ? Math.min(...prices) : 0,
         several: new Set(pool.map((v) => v.price)).size > 1,
         state: stockState(vs),
+        fresh: vs.some((v) => v.in_stock && !!v.confirmed_at && Date.now() - new Date(v.confirmed_at).getTime() < FRESH_MS),
         href,
       });
     }

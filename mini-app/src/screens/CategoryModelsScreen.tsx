@@ -1,12 +1,12 @@
 import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
-import type { Category, ProductFamily, Variant } from '../domain/types';
+import type { ProductFamily, Variant } from '../domain/types';
 import ColorCard from '../components/ColorCard';
 import { ListSkeleton } from '../components/Skeleton';
 import ManagerHint from '../components/ManagerHint';
 import { categoryName } from '../domain/shop';
-import { CATEGORY_SLUG, buildColorCards, groupTabs, modelPlace, type Tab } from '../domain/catalogTree';
+import { CATEGORY_SLUG, buildColorCards, genTitle, groupTabs, lineTitle, modelPlace, type Tab } from '../domain/catalogTree';
 import { hasNativeBackButton } from '../telegram/telegramWebApp';
 import './CatalogScreen.css';
 import { CatalogFailed, NotFound } from '../components/EmptyState';
@@ -20,26 +20,6 @@ import { CatalogFailed, NotFound } from '../components/EmptyState';
 
 const seg = (id: string) => encodeURIComponent(id || 'all');
 const unseg = (s: string | undefined) => (s === undefined ? undefined : s === 'all' ? '' : decodeURIComponent(s));
-
-function genTitle(cat: Category, gen: string): string {
-  switch (cat) {
-    case 'iPhone': return gen;
-    case 'MacBook': return gen === 'Neo' ? 'MacBook Neo' : `MacBook ${gen}`;
-    case 'iPad': return `iPad ${gen}`;
-    case 'Watch': return `Apple Watch ${gen}`;
-    case 'AirPods': return 'AirPods';
-  }
-}
-
-function lineTitle(cat: Category, gen: string, line: string): string {
-  switch (cat) {
-    case 'iPhone': return `iPhone ${line}`;
-    case 'MacBook': return line === 'MacBook Neo' ? line : `${line} ${gen}`;
-    case 'iPad': return `${line} ${gen}`;
-    case 'Watch': return `Apple Watch ${line}`;
-    case 'AirPods': return line;
-  }
-}
 
 interface RowData { key: string; title: string; image: string; images: string[]; hexes: string[]; minPrice: number; inStock: boolean; ask: boolean; to: string }
 

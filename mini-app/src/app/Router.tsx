@@ -71,7 +71,6 @@ function Layout() {
           <Route path="/checkout" element={<CheckoutScreen />} />
           <Route path="/result" element={<OrderResultScreen />} />
           <Route path="/profile" element={<ProfileScreen />} />
-          <Route path="/admin" element={<AdminScreen />} />
           <Route path="/admin/*" element={<AdminScreen />} />
         </Routes>
       </Suspense>

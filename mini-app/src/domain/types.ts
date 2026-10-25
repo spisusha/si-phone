@@ -24,6 +24,8 @@ export interface Variant {
   name?: string;
   /** «уточнить» — цену и наличие подтверждает менеджер */
   status?: 'в наличии' | 'уточнить';
+  /** Когда цену подтвердил прайс или менеджер — 2 дня такие позиции выше на главной */
+  confirmed_at?: string | null;
   updated_at: string;
 }
 
