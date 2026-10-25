@@ -14,7 +14,9 @@ import {
   MACS, RU_KEYBOARD_EXTRA, WATCHES, AIRPODS,
 } from './models.mjs';
 
-const require = createRequire(import.meta.url);
+// xlsx нужна только этому инструменту (запись таблицы), в зависимостях магазина её нет — там она удалена
+// из-за уязвимостей разбора чужих файлов. Ставим отдельно: XLSX_FROM=<папка, где установлен xlsx>.
+const require = createRequire(process.env.XLSX_FROM ? join(process.env.XLSX_FROM, 'noop.js') : import.meta.url);
 const XLSX = require('xlsx');
 const here = dirname(fileURLToPath(import.meta.url));
 const outName = process.env.OUT_NAME ?? 'si-phone-catalog'; // другое имя — если прежний файл открыт в Excel

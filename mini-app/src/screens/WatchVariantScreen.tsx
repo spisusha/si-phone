@@ -1,15 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
-import { formatWatchDisplay } from '../domain/watchFormat';
 import { getDisplayImages } from '../domain/imageUtils';
 import { DetailSkeleton } from '../components/Skeleton';
 import AddToCart from '../components/AddToCart';
+import OptionSelector from '../components/OptionSelector';
 import StockBadge, { stockState } from '../components/StockBadge';
-import { hasNativeBackButton } from '../telegram/telegramWebApp';
+import { hasNativeBackButton, haptic } from '../telegram/telegramWebApp';
+import type { Variant } from '../domain/types';
 import './ProductDetailScreen.css';
 import { CatalogFailed, NotFound } from '../components/EmptyState';
 
+// Экран одного товара: Apple Watch и AirPods (кроме Max).
+// У часов внутри можно сменить размер корпуса и «корпус + ремешок», не выходя назад (Роман, этап B2).
+
+const sizeLabel = (s: string) => s.replace(/mm$/, ' мм');
 
 export default function SkuVariantScreen() {
   // В Telegram «Назад» — системная кнопка в шапке; своя стрелка — только в браузере.
@@ -17,74 +22,51 @@ export default function SkuVariantScreen() {
   const { variantId } = useParams<{ variantId: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, failed, load } = useCatalogStore();
-  const [imgIdx, setImgIdx] = useState(0);
 
   useEffect(() => { load(); }, [load]);
 
   const variant = variants.find((v) => v.id === variantId);
   const family = variant ? families.find((f) => f.id === variant.family_id) : null;
+  const isWatch = family?.category === 'Watch';
+
+  // Соседи по модели: другие размеры этого же «корпуса + ремешка» и другие сочетания
+  const siblings = useMemo(
+    () => (variant ? variants.filter((v) => v.family_id === variant.family_id) : []),
+    [variants, variant],
+  );
+  const sizes = useMemo(
+    () => siblings.filter((v) => v.options.band === variant?.options.band),
+    [siblings, variant],
+  );
+  const looks = useMemo(() => {
+    const m = new Map<string, Variant>();
+    for (const v of siblings) {
+      const k = String(v.options.band ?? '');
+      const prev = m.get(k);
+      // показываем вариант того же размера, что выбран сейчас
+      if (!prev || (v.options.size === variant?.options.size && prev.options.size !== variant?.options.size)) m.set(k, v);
+    }
+    return [...m.values()];
+  }, [siblings, variant]);
 
   if (loading) return <DetailSkeleton />;
   if (failed) return <CatalogFailed />;
   if (!variant || !family) return <NotFound />;
 
-  const isWatch = family.category === 'Watch';
-  const isIphone = family.category === 'iPhone';
-
-  let title: string;
-  let subtitleParts: string[] = [];
-  if (isWatch && variant.options.band) {
-    // Каталог v2: размер, корпус и ремешок уже разложены по колонкам таблицы
-    title = family.title;
-    const size = String(variant.options.size || '').replace(/mm$/, ' мм');
-    subtitleParts = [size, ...String(variant.options.band).split(' / ')].filter(Boolean);
-  } else if (isWatch) {
-    const raw = variant.options.supplierTitle || variant.options.raw || '';
-    const wd = formatWatchDisplay(raw);
-    title = wd.shortTitle || family.title;
-    subtitleParts = wd.subtitleParts;
-  } else if (isIphone) {
-    title = family.title;
-    const opts = variant.options || {};
-    const parts: string[] = [];
-    if (opts.storage) {
-      const gb = Number(opts.storage);
-      parts.push(gb >= 1024 ? `${gb / 1024} ТБ` : `${gb} ГБ`);
-    }
-    if (opts.colorLabel) parts.push(String(opts.colorLabel));
-    if (opts.simType) parts.push(String(opts.simType));
-    subtitleParts = parts;
-  } else if (family.category === 'iPad') {
-    title = family.title;
-    const opts = variant.options || {};
-    const parts: string[] = [];
-    if (opts.colorLabel) parts.push(String(opts.colorLabel));
-    if (opts.storage) {
-      const gb = Number(opts.storage);
-      parts.push(gb >= 1024 ? `${gb / 1024} ТБ` : `${gb} ГБ`);
-    }
-    if (opts.connectivity) parts.push(String(opts.connectivity));
-    subtitleParts = parts;
-  } else if (family.category === 'MacBook') {
-    title = family.title;
-    const opts = variant.options || {};
-    const parts: string[] = [];
-    if (opts.chip) parts.push(String(opts.chip));
-    if (opts.memStorage) parts.push(String(opts.memStorage));
-    if (opts.colorLabel) parts.push(String(opts.colorLabel));
-    if (opts.ruKeyboard) parts.push('RU');
-    subtitleParts = parts;
-  } else {
-    title = family.title;
-  }
-
+  const title = /^Apple Watch/.test(family.title) ? family.title : family.title.replace(/^Apple\s+/, '');
+  const [caseName, band] = String(variant.options.band ?? '').split(' / ');
   const images = getDisplayImages(variant, family);
 
-  const subtitle = subtitleParts.join(' • ');
+  const go = (v: Variant) => {
+    if (v.id === variant.id) return;
+    haptic('select');
+    navigate(`/variant/${v.id}`, { replace: true });
+  };
+
   const cartItem = {
     variantId: variant.id,
     familyId: family.id,
-    titleSnapshot: subtitle ? `${title} • ${subtitle}` : title,
+    titleSnapshot: variant.name || title,
     optionsSnapshot: variant.options,
     priceSnapshot: variant.price,
     image: images[0] || '',
@@ -101,32 +83,42 @@ export default function SkuVariantScreen() {
       )}
 
       <div className="detail-gallery">
-        <img
-          src={images[imgIdx] || '/placeholder.svg'}
-          alt={title}
-        />
-        {images.length > 1 && (
-          <div className="detail-dots">
-            {images.map((_, i) => (
-              <span
-                key={i}
-                className={`detail-dot${i === imgIdx ? ' active' : ''}`}
-                onClick={() => setImgIdx(i)}
-              />
-            ))}
-          </div>
-        )}
+        <img src={images[0] || '/placeholder.svg'} alt={variant.name || title} />
       </div>
 
-      <h1 className="detail-title">{title.replace(/^Apple\s+/, '')}</h1>
+      <h1 className="detail-title">{title}</h1>
 
-      {subtitleParts.length > 0 && (
-        <p className="detail-desc">{subtitleParts.join(' • ')}</p>
-      )}
-
-      {isWatch && subtitleParts.length > 0 && (
-        <div className="watch-specs">
-          <WatchSpecs parts={subtitleParts} />
+      {isWatch && (
+        <div className="detail-options">
+          {looks.length > 1 && (
+            <div className="look-picker">
+              <span className="option-selector__label">Корпус и ремешок</span>
+              <div className="look-picker__row">
+                {looks.map((v) => (
+                  <button
+                    key={v.id}
+                    className={`look-thumb${v.options.band === variant.options.band ? ' look-thumb--active' : ''}`}
+                    onClick={() => go(v)}
+                    aria-label={String(v.options.band)}
+                  >
+                    <img src={v.images[0] || '/placeholder.svg'} alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <OptionSelector
+            label="Размер корпуса"
+            options={sizes.map((v) => String(v.options.size))}
+            value={String(variant.options.size)}
+            onChange={(s) => { const v = sizes.find((x) => x.options.size === s); if (v) go(v); }}
+            format={sizeLabel}
+          />
+          <ul className="watch-specs__list">
+            {caseName && <li>Корпус: {caseName}</li>}
+            {band && <li>Ремешок: {band}</li>}
+            {sizes.length <= 1 && variant.options.size && <li>Размер корпуса: {sizeLabel(String(variant.options.size))}</li>}
+          </ul>
         </div>
       )}
 
@@ -139,36 +131,5 @@ export default function SkuVariantScreen() {
 
       <AddToCart item={cartItem} inStock={variant.in_stock} askManager={variant.status === 'уточнить'} />
     </div>
-  );
-}
-
-function WatchSpecs({ parts }: { parts: string[] }) {
-  if (parts.length === 0) return null;
-
-  const labels: string[] = [];
-
-  for (const p of parts) {
-    if (/мм$/.test(p)) {
-      labels.push(`Размер корпуса: ${p}`);
-    } else if (/Titanium|Aluminum|Ceramic|Space Gr[ae]y|Jet Black|Rose Gold|Starlight|Midnight|Silver|Slate|Natural|Black|Gold/i.test(p)
-      && !/Band|Loop/i.test(p)) {
-      labels.push(`Корпус: ${p}`);
-    } else if (/Band|Loop/i.test(p)) {
-      labels.push(`Ремешок: ${p}`);
-    } else if (/^(S\/M|M\/L|[SML])$/.test(p)) {
-      labels.push(`Размер ремешка: ${p}`);
-    } else if (/^[A-Za-z0-9]{4,6}$/.test(p) && /[A-Za-z]/.test(p) && /\d/.test(p)) {
-      labels.push(`Код: ${p}`);
-    } else {
-      labels.push(p);
-    }
-  }
-
-  return (
-    <ul className="watch-specs__list">
-      {labels.map((l, i) => (
-        <li key={i}>{l}</li>
-      ))}
-    </ul>
   );
 }

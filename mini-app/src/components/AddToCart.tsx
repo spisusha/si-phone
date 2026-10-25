@@ -18,8 +18,9 @@ interface Props {
 /**
  * Кнопка «В корзину» с ценой — всегда под рукой.
  * Своя полоса над нижним меню — и в Telegram, и в браузере (как в корзине и оформлении).
- * После добавления — тихо: кнопка становится «В корзине · Перейти»,
+ * После добавления — тихо: кнопка становится «Перейти в корзину»,
  * значок корзины в меню подпрыгивает (выбор Романа, этап 5.1).
+ * Без точек-разделителей (Роман, B2): «В корзину» слева, цена справа.
  */
 export default function AddToCart({ item, inStock, askManager }: Props) {
   const navigate = useNavigate();
@@ -36,21 +37,24 @@ export default function AddToCart({ item, inStock, askManager }: Props) {
   const text = !item ? 'Выберите опции'
     : !inStock && askManager ? 'Цену и наличие уточните у менеджера'
     : !inStock ? 'Нет в наличии'
-    : inCart ? 'В корзине · Перейти'
-    : `В корзину · ${rub(item.priceSnapshot)}`;
+    : inCart ? 'Перейти в корзину'
+    : 'В корзину';
+  const price = item && inStock && !inCart ? rub(item.priceSnapshot) : '';
   const onClick = inCart ? () => navigate('/cart') : handleAdd;
 
-  const native = useTelegramMainButton({ text, onClick, disabled });
+  // Системная кнопка Telegram умеет только одну строку текста
+  const native = useTelegramMainButton({ text: price ? `${text}  ${price}` : text, onClick, disabled });
   if (native) return null;
 
   return (
     <div className="action-bar">
       <button
-        className={`btn btn-primary btn-block action-bar__btn${inCart ? ' action-bar__btn--go' : ''}`}
+        className={`btn btn-primary btn-block action-bar__btn${inCart ? ' action-bar__btn--go' : ''}${price ? ' action-bar__btn--split' : ''}`}
         disabled={disabled}
         onClick={onClick}
       >
-        {text}
+        <span>{text}</span>
+        {price && <span>{price}</span>}
       </button>
     </div>
   );

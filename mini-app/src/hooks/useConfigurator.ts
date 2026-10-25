@@ -30,8 +30,18 @@ export interface ConfiguratorState {
   setImgIdx: (i: number) => void;
 }
 
+// «16GB/512GB», «24GB/1TB» → [16, 512], [24, 1024] — чтобы память MacBook шла по возрастанию
+function memKey(v: string): number[] {
+  return v.split('/').map((p) => (parseFloat(p) || 0) * (/TB/i.test(p) ? 1024 : 1));
+}
+
 function sortValues(key: string, values: string[]): string[] {
   if (key === 'storage') return [...values].sort((a, b) => Number(a) - Number(b));
+  if (key === 'memStorage') return [...values].sort((a, b) => {
+    const [ra, sa] = memKey(a), [rb, sb] = memKey(b);
+    return ra - rb || sa - sb;
+  });
+  if (key === 'keyboard') return [...values].sort((a) => (a === 'EN' ? -1 : 1));
   return [...values].sort();
 }
 
@@ -83,7 +93,13 @@ function pickBestVariant(
   return variants.find((v) => Object.entries(required).every(([k, val]) => eq(v.options[k], val))) ?? null;
 }
 
-export function useConfigurator(variants: Variant[], familyImages: string[], family?: ProductFamily | null): ConfiguratorState {
+export function useConfigurator(
+  variants: Variant[],
+  familyImages: string[],
+  family?: ProductFamily | null,
+  /** Цвет, на карточке которого нажали в списке (ключ options.color) */
+  initialColor?: string | null,
+): ConfiguratorState {
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string | undefined>>({});
   const [imgIdx, setImgIdx] = useState(0);
 
@@ -105,7 +121,7 @@ export function useConfigurator(variants: Variant[], familyImages: string[], fam
     return [...seen.values()];
   }, [variants, hasColorOptions]);
 
-  const OPTION_ORDER = ['storage', 'simType', 'connectivity', 'size'];
+  const OPTION_ORDER = ['storage', 'memStorage', 'simType', 'connectivity', 'keyboard', 'size'];
 
   const nonColorKeys = useMemo(() => {
     const present = new Set<string>();
@@ -176,7 +192,8 @@ export function useConfigurator(variants: Variant[], familyImages: string[], fam
   // Init: first in-stock variant
   useEffect(() => {
     if (variants.length === 0 || Object.keys(selectedOptions).length > 0) return;
-    const first = variants.find((v) => v.in_stock) ?? variants[0];
+    const ofColor = initialColor ? variants.filter((v) => v.options.color === initialColor) : [];
+    const first = ofColor.find((v) => v.in_stock) ?? ofColor[0] ?? variants.find((v) => v.in_stock) ?? variants[0];
     if (!first) return;
     setSelectedOptions(variantToOpts(first));
   }, [variants]); // eslint-disable-line react-hooks/exhaustive-deps

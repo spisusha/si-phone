@@ -113,6 +113,19 @@
   color: var(--color-ask-text);
 }
 
+/* Вкладки «поколение» и «линейка» в каталоге: две строки чипсов подряд */
+.catalog-tabs {
+  margin-top: 12px;
+}
+
+.catalog-tabs + .catalog-tabs {
+  margin-top: 8px;
+}
+
+.catalog-grid {
+  margin-top: 16px;
+}
+
 .catalog-model-btn:active {
   background: var(--color-primary-light);
 }

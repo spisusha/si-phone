@@ -19,6 +19,7 @@ interface ItemRow {
   id: number;
   model_id: string;
   name: string;
+  year: number | null;
   storage: string | null;
   color: string | null;
   color_hex: string | null;
@@ -34,7 +35,7 @@ interface ItemRow {
   updated_at: string;
 }
 
-const ITEM_COLUMNS = 'id, model_id, name, storage, color, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, photo_url, updated_at';
+const ITEM_COLUMNS = 'id, model_id, name, year, storage, color, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, photo_url, updated_at';
 const PAGE = 1000; // Supabase отдаёт не больше 1000 строк за запрос
 
 // «256GB» → «256», «1TB» → «1024»
@@ -54,15 +55,16 @@ function itemOptions(it: ItemRow, category: Category, title: string): VariantOpt
     case 'iPad':
       return { ...color, storage: storageGb(it.storage), connectivity: it.sim ?? undefined, chip: it.chip ?? undefined };
     case 'MacBook':
+      // Выбор внутри карточки: цвет → память → клавиатура (РУС — гравировка, решение Романа)
       return {
         ...color,
         chip: it.chip ?? undefined,
         memStorage: it.ram_ssd ?? undefined,
-        size: it.size ?? undefined,
-        ...(it.keyboard === 'РУС' ? { ruKeyboard: 'true' } : {}),
+        keyboard: it.keyboard === 'РУС' ? 'РУС' : 'EN',
       };
     case 'Watch':
-      return { size: it.size ?? undefined, band: it.band ?? undefined };
+      // colorHex корпуса — только чтобы плашки в каталоге были разных цветов (выбора цвета у часов нет)
+      return { size: it.size ?? undefined, band: it.band ?? undefined, colorHex: it.color_hex ?? undefined };
     case 'AirPods':
       // У AirPods Max выбирают цвет, у остальных выбирать нечего
       return /max/i.test(title) ? color : {};
@@ -110,11 +112,13 @@ async function loadCatalog(): Promise<{ families: ProductFamily[]; variants: Var
   const modelById = new Map(models.map((m) => [m.id, m]));
 
   const variants: Variant[] = [];
+  const yearByModel = new Map<string, number>();
   const photosByModel = new Map<string, { cover: string[]; byColor: Record<string, string[]> }>();
   for (const it of items) {
     const m = modelById.get(it.model_id);
     if (!m) continue;
     const options = itemOptions(it, m.category, m.title);
+    if (it.year) yearByModel.set(m.id, Math.max(yearByModel.get(m.id) ?? 0, it.year));
     const images = it.photo_url ? [it.photo_url] : [];
     variants.push({
       id: String(it.id),
@@ -148,6 +152,7 @@ async function loadCatalog(): Promise<{ families: ProductFamily[]; variants: Var
     imagesByColor: photosByModel.get(m.id)?.byColor ?? {},
     popularity_score: m.sort,
     created_at: m.created_at,
+    year: yearByModel.get(m.id),
   }));
 
   return { families, variants };

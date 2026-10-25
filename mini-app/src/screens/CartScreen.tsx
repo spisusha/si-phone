@@ -16,7 +16,7 @@ export default function CartScreen() {
 
   // В Telegram итоговое действие — большая нижняя кнопка с суммой; своя — только в браузере.
   const nativeMain = useTelegramMainButton({
-    text: `Оформить · ${sum.toLocaleString('ru-RU')} ₽`,
+    text: `Оформить  ${sum.toLocaleString('ru-RU')} ₽`,
     onClick: () => navigate('/checkout'),
     visible: items.length > 0,
   });
@@ -65,7 +65,7 @@ export default function CartScreen() {
       </div>
 
       <div className="cart-total">
-        <span>Итого · {plural(count, ['товар', 'товара', 'товаров'])}</span>
+        <span>Итого за {plural(count, ['товар', 'товара', 'товаров'])}</span>
         <span className="cart-total__value">{sum.toLocaleString('ru-RU')} ₽</span>
       </div>
 
@@ -78,8 +78,9 @@ export default function CartScreen() {
 
       {!nativeMain && (
         <div className="action-bar">
-          <button className="btn btn-primary btn-block action-bar__btn" onClick={() => navigate('/checkout')}>
-            Оформить · {sum.toLocaleString('ru-RU')} ₽
+          <button className="btn btn-primary btn-block action-bar__btn action-bar__btn--split" onClick={() => navigate('/checkout')}>
+            <span>Оформить</span>
+            <span>{sum.toLocaleString('ru-RU')} ₽</span>
           </button>
         </div>
       )}

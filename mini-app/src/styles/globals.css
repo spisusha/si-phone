@@ -210,3 +210,14 @@ input:focus, select:focus, textarea:focus {
 .page.page--action-bar {
   padding-bottom: 76px;
 }
+
+/* Кнопка с ценой: надпись слева, сумма справа — без точек-разделителей (Роман, этап B2) */
+.action-bar .action-bar__btn--split,
+.btn-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 20px;
+  padding-right: 20px;
+}

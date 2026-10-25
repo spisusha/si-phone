@@ -5,7 +5,6 @@ import BottomNav from '../components/BottomNav';
 import HomeScreen from '../screens/HomeScreen';
 import CatalogScreen from '../screens/CatalogScreen';
 import CategoryModelsScreen from '../screens/CategoryModelsScreen';
-import FamilyProductsScreen from '../screens/FamilyProductsScreen';
 import ProductListScreen from '../screens/ProductListScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import SkuVariantScreen from '../screens/WatchVariantScreen';
@@ -15,7 +14,7 @@ import OrderResultScreen from '../screens/OrderResultScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import Loader from '../components/Loader';
 
-// Админка (и библиотека Excel внутри неё) грузится отдельно — покупатель её не скачивает.
+// Админка грузится отдельно — покупатель её не скачивает.
 const AdminScreen = lazy(() => import('../screens/AdminScreen'));
 
 // Главные экраны (вкладки нижнего меню и экран заказа) — без кнопки «Назад».
@@ -54,7 +53,8 @@ function Layout() {
           <Route path="/" element={<HomeScreen />} />
           <Route path="/catalog" element={<CatalogScreen />} />
           <Route path="/catalog/:category" element={<CategoryModelsScreen />} />
-          <Route path="/catalog/:category/:familyId" element={<FamilyProductsScreen />} />
+          <Route path="/catalog/:category/:gen" element={<CategoryModelsScreen />} />
+          <Route path="/catalog/:category/:gen/:line" element={<CategoryModelsScreen />} />
           <Route path="/products" element={<ProductListScreen />} />
           <Route path="/product/:id" element={<ProductDetailScreen />} />
           <Route path="/variant/:variantId" element={<SkuVariantScreen />} />

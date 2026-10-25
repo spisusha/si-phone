@@ -7,6 +7,8 @@ export interface ProductFamily {
   imagesByColor?: Record<string, string[]>;
   popularity_score: number;
   created_at: string;
+  /** Год модели (самый поздний у её товаров) — вкладки поколений у часов */
+  year?: number;
 }
 
 export interface Variant {

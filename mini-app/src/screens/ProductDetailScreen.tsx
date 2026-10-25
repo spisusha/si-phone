@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
 import { useConfigurator } from '../hooks/useConfigurator';
 import OptionSelector from '../components/OptionSelector';
 import AddToCart from '../components/AddToCart';
 import StockBadge, { stockState } from '../components/StockBadge';
 import { DetailSkeleton } from '../components/Skeleton';
-import { formatStorage } from '../domain/variantFormat';
+import { formatStorage, formatMemStorage } from '../domain/variantFormat';
 import { hasNativeBackButton, haptic } from '../telegram/telegramWebApp';
 import './ProductDetailScreen.css';
 import { CatalogFailed, NotFound } from '../components/EmptyState';
@@ -14,11 +14,15 @@ import { CatalogFailed, NotFound } from '../components/EmptyState';
 // Как показывать значения опций: «1024» → «1 ТБ»
 const OPTION_FORMAT: Record<string, (v: string) => string> = {
   storage: (v) => formatStorage(v),
+  memStorage: (v) => formatMemStorage(v),
+  keyboard: (v) => (v === 'РУС' ? 'С русскими буквами' : 'Английская'),
   size: (v) => (/^\d+(\.\d+)?$/.test(v) ? `${v}″` : v),
 };
 
 const OPTION_LABELS: Record<string, string> = {
   storage: 'Память',
+  memStorage: 'Память и накопитель',
+  keyboard: 'Клавиатура',
   simType: 'SIM',
   connectivity: 'Связь',
   size: 'Размер',
@@ -30,6 +34,7 @@ export default function ProductDetailScreen() {
   // В Telegram «Назад» — системная кнопка в шапке; своя стрелка — только в браузере.
   const nativeBack = hasNativeBackButton();
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { families, variants, loading, failed, load } = useCatalogStore();
 
@@ -53,7 +58,7 @@ export default function ProductDetailScreen() {
     displayImages,
     imgIdx,
     setImgIdx,
-  } = useConfigurator(familyVariants, family?.images ?? [], family);
+  } = useConfigurator(familyVariants, family?.images ?? [], family, searchParams.get('color'));
 
   if (loading) return <DetailSkeleton />;
   if (failed) return <CatalogFailed />;

@@ -120,8 +120,8 @@ export const WATCHES = [
     W('Ceramic', 'Pearl White', 'Жемчужно-белый', 'Sand Sport Band', 'Спортивный ремешок песочный', 55000),
     W('Ceramic', 'Night Blue', 'Ночной синий', 'Navy Blue Sport Band', 'Спортивный ремешок тёмно-синий', 55000),
   ] },
-  // SE 3 — обновлённая партия 2026 года (другие ремешки); у конкурента есть и 2025-я, дешевле
-  { series: 'Apple Watch SE 3', year: 2026, design: 'watch-se', sizes: { 40: 21500, 44: 24000 }, cases: [
+  // SE 3 — модель 2025 года (Роман, 25.10.2026: год модели, а не партии); ремешки — комплекты партии 2026
+  { series: 'Apple Watch SE 3', year: 2025, design: 'watch-se', sizes: { 40: 21500, 44: 24000 }, cases: [
     W('Aluminum', 'Midnight', 'Тёмная ночь', 'Navy Blue Sport Band', 'Спортивный ремешок тёмно-синий'),
     W('Aluminum', 'Starlight', 'Сияющая звезда', 'Sand Sport Band', 'Спортивный ремешок песочный'),
   ] },

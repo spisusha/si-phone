@@ -75,7 +75,7 @@ export default function CheckoutScreen() {
 
   // Итоговое действие — большая кнопка Telegram с суммой и крутилкой на время отправки.
   const nativeMain = useTelegramMainButton({
-    text: `Подтвердить заказ · ${total().toLocaleString('ru-RU')} ₽`,
+    text: `Подтвердить заказ  ${total().toLocaleString('ru-RU')} ₽`,
     onClick: handleSubmit,
     visible: items.length > 0,
     progress: submitting,
@@ -172,7 +172,7 @@ export default function CheckoutScreen() {
 
       <div className="tg-group checkout-summary">
         <div className="tg-row">
-          <span className="tg-row__main tg-row__title">Итого · {plural(count, ['товар', 'товара', 'товаров'])}</span>
+          <span className="tg-row__main tg-row__title">Итого за {plural(count, ['товар', 'товара', 'товаров'])}</span>
           <span className="tg-row__value checkout-summary__total">{total().toLocaleString('ru-RU')} ₽</span>
         </div>
       </div>
@@ -183,11 +183,16 @@ export default function CheckoutScreen() {
       {!nativeMain && (
         <div className="action-bar">
           <button
-            className="btn btn-primary btn-block action-bar__btn"
+            className={`btn btn-primary btn-block action-bar__btn${submitting ? '' : ' action-bar__btn--split'}`}
             onClick={handleSubmit}
             disabled={submitting}
           >
-            {submitting ? 'Оформляем…' : `Подтвердить заказ · ${total().toLocaleString('ru-RU')} ₽`}
+            {submitting ? 'Оформляем…' : (
+              <>
+                <span>Подтвердить заказ</span>
+                <span>{total().toLocaleString('ru-RU')} ₽</span>
+              </>
+            )}
           </button>
         </div>
       )}
