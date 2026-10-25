@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCatalogStore } from '../store/catalogStore';
 import { getDisplayImages } from '../domain/imageUtils';
@@ -22,8 +22,10 @@ export default function SkuVariantScreen() {
   const { variantId } = useParams<{ variantId: string }>();
   const navigate = useNavigate();
   const { families, variants, loading, failed, load } = useCatalogStore();
+  const [imgIdx, setImgIdx] = useState(0);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { setImgIdx(0); }, [variantId]); // другой корпус/размер — с первого фото
 
   const variant = variants.find((v) => v.id === variantId);
   const family = variant ? families.find((f) => f.id === variant.family_id) : null;
@@ -83,7 +85,14 @@ export default function SkuVariantScreen() {
       )}
 
       <div className="detail-gallery">
-        <img src={images[0] || '/placeholder.svg'} alt={variant.name || title} />
+        <img src={images[imgIdx] || images[0] || '/placeholder.svg'} alt={variant.name || title} />
+        {images.length > 1 && (
+          <div className="detail-dots">
+            {images.map((_, i) => (
+              <span key={i} className={`detail-dot${i === imgIdx ? ' active' : ''}`} onClick={() => setImgIdx(i)} />
+            ))}
+          </div>
+        )}
       </div>
 
       <h1 className="detail-title">{title}</h1>

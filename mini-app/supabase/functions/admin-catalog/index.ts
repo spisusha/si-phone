@@ -50,7 +50,7 @@ Deno.serve(withCors(async (req: Request) => {
       case 'catalog': {
         const [models, items, costs, markups, settings, fx] = await Promise.all([
           sb.from('catalog_models').select('id, category, title, sort').order('sort', { ascending: false }),
-          sb.from('catalog_items').select('id, model_id, name, storage, color, sim, size, chip, ram_ssd, band, keyboard, price, status, visible, photo_url, confirmed_at').order('id').range(0, 4999),
+          sb.from('catalog_items').select('id, model_id, name, year, storage, color, color_ru, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, visible, photo_key, photo_url, extra_photos, confirmed_at').order('id').range(0, 4999),
           sb.from('catalog_costs').select('item_id, purchase_price, purchase_date, source').range(0, 4999),
           sb.from('markup_rules').select('category, percent'),
           sb.from('pricing_settings').select('fx_margin_pct').eq('id', 1).single(),
@@ -132,6 +132,67 @@ Deno.serve(withCors(async (req: Request) => {
         const { error } = await sb.rpc('admin_set_pricing', { p_fx_margin: Math.round(margin * 100) / 100, p_markups: clean, p_who: who });
         if (error) throw new Error(error.message);
         return json({ ok: true });
+      }
+
+      // Новая модель (iPhone 19 и т. п.): код из названия, место в списке — после выбранной модели
+      case 'add-model': {
+        const title = String(body.title ?? '').trim().replace(/\s+/g, ' ');
+        const category = String(body.category ?? '');
+        const id = title.toLowerCase().replace(/["″]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        if (!/^[a-z0-9-]{2,60}$/.test(id)) return json({ error: 'Название модели — латиницей, как у Apple: «iPhone 19 Pro»' }, 400);
+        const after = body.after ? String(body.after) : null;
+        const { data, error } = await sb.rpc('admin_add_model', { p_id: id, p_category: category, p_title: title, p_after: after, p_who: who });
+        if (error) return json({ error: error.message }, 400);
+        return json({ ok: true, id: data });
+      }
+
+      // Новая позиция в модели: название собирает админка по правилам каталога, синонимы для прайсов — здесь
+      case 'add-item': {
+        const it = (body.item ?? {}) as Record<string, unknown>;
+        const modelId = String(it.model_id ?? '');
+        const { data: model } = await sb.from('catalog_models').select('id, title, category').eq('id', modelId).single();
+        if (!model) return json({ error: 'Нет такой модели' }, 400);
+        const name = String(it.name ?? '').trim();
+        if (!name.startsWith(model.title)) return json({ error: 'Название должно начинаться с модели' }, 400);
+        // Синонимы: общие для модели (у соседних позиций) + слова цвета, «рус» для гравировки
+        const { data: siblings } = await sb.from('catalog_items').select('synonyms').eq('model_id', modelId).limit(200);
+        const lists = (siblings ?? []).map((s) => String(s.synonyms ?? '').split(',').map((x) => x.trim()).filter(Boolean));
+        const common = lists.length ? lists.reduce((a, b) => a.filter((x) => b.includes(x))) : [model.title.toLowerCase(), model.title.toLowerCase().replace(/^(iphone|ipad|macbook|apple watch|airpods)\s+/, '')];
+        const own = [it.color, it.color_ru].filter(Boolean).map((x) => String(x).toLowerCase());
+        if (it.keyboard === 'РУС') own.push('рус', 'ру клавиатура', 'гравировка', 'кл');
+        if (it.band) own.push(String(it.band).toLowerCase().replace(' / ', ', '));
+        const synonyms = [...new Set([...common, ...own])].join(', ');
+        const { data, error } = await sb.rpc('admin_add_item', { p: { ...it, name, synonyms }, p_who: who });
+        if (error) return json({ error: error.message }, 400);
+        return json({ ok: true, id: data });
+      }
+
+      // Фото: разовая ссылка на загрузку одного файла в products/catalog/<ключ>.webp (писать в хранилище напрямую нельзя)
+      case 'photo-upload': {
+        const key = String(body.key ?? '');
+        const ext = body.ext === 'png' ? 'png' : 'webp';
+        if (!/^[a-z0-9-]{3,100}$/.test(key)) return json({ error: 'Неверный ключ фото' }, 400);
+        const path = `catalog/${key}.${ext}`;
+        const { data, error } = await sb.storage.from('products').createSignedUploadUrl(path, { upsert: true });
+        if (error) throw new Error(error.message);
+        const url = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/products/${path}?v=${Date.now()}`;
+        return json({ path: data.path, token: data.token, url });
+      }
+
+      // Фото: набор до 5 фото (первое — главное) для позиций одного цвета.
+      // Каждый адрес — только из нашего хранилища products/catalog/ с безопасным именем файла.
+      case 'set-photos': {
+        const key = String(body.key ?? '');
+        const urls = Array.isArray(body.urls) ? (body.urls as unknown[]).map(String) : [];
+        const ids = Array.isArray(body.itemIds) ? (body.itemIds as unknown[]).map(int).filter((n) => n > 0) : [];
+        const base = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/products/catalog/`;
+        const safe = (u: string) => u.startsWith(base) && /^[a-z0-9-]{3,100}\.(webp|png)\?v=\d+$/.test(u.slice(base.length));
+        if (!/^[a-z0-9-]{3,80}$/.test(key) || urls.length > 5 || !urls.every(safe) || !ids.length || ids.length > 200) {
+          return json({ error: 'Неверные данные фото' }, 400);
+        }
+        const { data, error } = await sb.rpc('admin_set_photos', { p_item_ids: ids, p_key: key, p_urls: urls, p_who: who });
+        if (error) throw new Error(error.message);
+        return json({ ok: true, updated: data });
       }
 
       // Курс ЦБ — обновить сейчас (обычно сам, дважды в день)

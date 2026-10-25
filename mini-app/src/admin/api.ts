@@ -30,9 +30,12 @@ export async function adminCall<T>(auth: AdminAuth, action: string, payload: Rec
 
 export interface AModel { id: string; category: 'iPhone' | 'iPad' | 'MacBook' | 'Watch' | 'AirPods'; title: string; sort: number }
 export interface AItem {
-  id: number; model_id: string; name: string; storage: string | null; color: string | null; sim: string | null;
+  id: number; model_id: string; name: string; year: number | null; storage: string | null; color: string | null;
+  color_ru: string | null; color_hex: string | null; sim: string | null;
   size: string | null; chip: string | null; ram_ssd: string | null; band: string | null; keyboard: string | null;
-  price: number; status: 'в наличии' | 'уточнить'; visible: boolean; photo_url: string | null; confirmed_at: string | null;
+  price: number; status: 'в наличии' | 'уточнить'; visible: boolean; photo_key: string | null; photo_url: string | null;
+  extra_photos: string[] | null;   // дополнительные фото (до 4), листаются в карточке товара
+  confirmed_at: string | null;
 }
 export interface ACost { item_id: number; purchase_price: number; purchase_date: string; source: string | null }
 export interface AFx { rate_date: string; usd_cbr: string; source: string | null; fetched_at: string }

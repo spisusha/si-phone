@@ -5,6 +5,7 @@ import { AdminContext, useAdmin, useDerived } from './context';
 import { AdmHeader, AdmRow, IconBox, IconClock, IconPercent, IconUpload } from './ui';
 import { ItemEdit, ProductsLevel, ProductsRoot } from './Products';
 import ImportScreen from './Import';
+import { NewItem, NewModel } from './NewItem';
 import { HistoryScreen, PricingScreen } from './Pricing';
 import { plural } from '../domain/plural';
 import './admin.css';
@@ -84,6 +85,9 @@ export default function AdminApp({ auth, logout, onDenied }: { auth: AdminAuth; 
         <Route path="products/:cat/:gen" element={<ProductsLevel />} />
         <Route path="products/:cat/:gen/:line" element={<ProductsLevel />} />
         <Route path="item/:id" element={<ItemEdit />} />
+        <Route path="new-model" element={<NewModel />} />
+        <Route path="new-model/:cat" element={<NewModel />} />
+        <Route path="new-item/:modelId" element={<NewItem />} />
         <Route path="import" element={<ImportScreen />} />
         <Route path="pricing" element={<PricingScreen />} />
         <Route path="history" element={<HistoryScreen />} />

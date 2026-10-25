@@ -32,11 +32,12 @@ interface ItemRow {
   price: number;
   status: 'в наличии' | 'уточнить';
   photo_url: string | null;
+  extra_photos: string[] | null;
   confirmed_at: string | null;
   updated_at: string;
 }
 
-const ITEM_COLUMNS = 'id, model_id, name, year, storage, color, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, photo_url, confirmed_at, updated_at';
+const ITEM_COLUMNS = 'id, model_id, name, year, storage, color, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, photo_url, extra_photos, confirmed_at, updated_at';
 const PAGE = 1000; // Supabase отдаёт не больше 1000 строк за запрос
 
 // «256GB» → «256», «1TB» → «1024»
@@ -120,7 +121,8 @@ async function loadCatalog(): Promise<{ families: ProductFamily[]; variants: Var
     if (!m) continue;
     const options = itemOptions(it, m.category, m.title);
     if (it.year) yearByModel.set(m.id, Math.max(yearByModel.get(m.id) ?? 0, it.year));
-    const images = it.photo_url ? [it.photo_url] : [];
+    // до 5 фото: главное + дополнительные (листаются в карточке товара)
+    const images = it.photo_url ? [it.photo_url, ...(it.extra_photos ?? [])] : [];
     variants.push({
       id: String(it.id),
       family_id: m.id,

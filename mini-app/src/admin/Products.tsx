@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { PhotoGallery, PhotoRules } from './Photo';
+import { photoKeyFor } from './NewItem';
 import type { Category, ProductFamily } from '../domain/types';
 import { ALL_CATEGORIES } from '../domain/types';
 import { genTitle, groupTabs, lineTitle, modelPlace } from '../domain/catalogTree';
@@ -84,13 +86,19 @@ export function ProductsRoot() {
           {found.map((i) => <ItemRow key={i.id} item={i} title={i.name} />)}
         </>
       ) : (
-        <div className="catalog-models">
-          {ALL_CATEGORIES.map((cat) => {
-            const items = data.items.filter((i) => modelById.get(i.model_id)?.category === cat);
-            const photo = items.find((i) => i.photo_url)?.photo_url;
-            return <AdmRow key={cat} title={cat} sub={counts(items)} image={photo} onClick={() => navigate(`/admin/products/${cat.toLowerCase()}`)} />;
-          })}
-        </div>
+        <>
+          <div className="catalog-models">
+            {ALL_CATEGORIES.map((cat) => {
+              const items = data.items.filter((i) => modelById.get(i.model_id)?.category === cat);
+              const photo = items.find((i) => i.photo_url)?.photo_url;
+              return <AdmRow key={cat} title={cat} sub={counts(items)} image={photo} onClick={() => navigate(`/admin/products/${cat.toLowerCase()}`)} />;
+            })}
+          </div>
+          <div className="adm-actions">
+            <button className="btn btn-ghost" onClick={() => navigate('/admin/new-model')}>+ Новая модель</button>
+          </div>
+          <p className="adm-hint">Новый цвет или объём у существующей модели — кнопка «+ Добавить позицию» внутри модели.</p>
+        </>
       )}
     </div>
   );
@@ -160,6 +168,9 @@ export function ProductsLevel() {
           <div key={f.id}>
             {lineTab.families.length > 1 && <div className="adm-section">{f.title}</div>}
             {items.map((i) => <ItemRow key={i.id} item={i} title={shortName(i, f.title)} />)}
+            <button className="btn btn-ghost" style={{ width: '100%', minHeight: 44, marginTop: 4 }} onClick={() => navigate(`/admin/new-item/${f.id}`)}>
+              + Добавить позицию{lineTab.families.length > 1 ? ` в ${f.title}` : ''}
+            </button>
           </div>
         );
       })}
@@ -170,7 +181,8 @@ export function ProductsLevel() {
 export function ItemEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { call, reload } = useAdmin();
+  const [params] = useSearchParams();
+  const { data, call, reload } = useAdmin();
   const { itemById, costById, modelById, markup } = useDerived();
   const item = itemById.get(Number(id));
   const cost = item ? costById.get(item.id) : undefined;
@@ -190,6 +202,10 @@ export function ItemEdit() {
   const priceChanged = p !== (cost?.purchase_price ?? 0);
   const flagsChanged = status !== item.status || visible !== item.visible;
   const back = `/admin/products/${model.category.toLowerCase()}`;
+  // Фото — одно на «модель + цвет» (у часов — «корпус + ремешок»): все объёмы памяти этого цвета
+  const sameLook = data.items.filter((i) => i.model_id === item.model_id &&
+    (item.band ? i.band === item.band : (i.color ?? '') === (item.color ?? '')));
+  const lookLabel = item.band || item.color || model.title;
 
   const save = async () => {
     if (priceChanged && !(p >= 1000 && p <= 5_000_000)) { setMsg({ ok: false, text: 'Закупка — от 1 000 до 5 000 000 ₽' }); return; }
@@ -257,6 +273,18 @@ export function ItemEdit() {
           {busy ? 'Сохраняю…' : 'Сохранить'}
         </button>
       </div>
+
+      <div className="adm-section" id="photo">Фото</div>
+      {params.get('new') && !item.photo_url && <div className="adm-ok">Позиция добавлена. Осталось фото — загрузите его ниже.</div>}
+      {params.get('new') && item.photo_url && <div className="adm-ok">Позиция добавлена, фото взято у этого же цвета.</div>}
+      <PhotoRules />
+      <PhotoGallery
+        groupKey={item.photo_key ?? photoKeyFor(model.id, item)}
+        uploadBase={photoKeyFor(model.id, item)}
+        itemIds={sameLook.map((i) => i.id)}
+        current={[item.photo_url, ...(item.extra_photos ?? [])].filter((u): u is string => !!u)}
+        label={`${lookLabel} (${plural(sameLook.length, ['позиция', 'позиции', 'позиций'])} этой модели)`}
+      />
     </div>
   );
 }
