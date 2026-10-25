@@ -14,6 +14,10 @@ export const OPERATOR = {
   telegram: '@l_bobr_l',
 };
 
+// Сведения о продавце и оговорка про оферту (ст. 437, 494 ГК РФ) — тихо, в корзине и в профиле
+export const SELLER_LINE = `Продавец: ИП Осипов Артём Сергеевич, ОГРНИП ${OPERATOR.ogrnip}, ИНН ${OPERATOR.inn}, ${OPERATOR.city}.`;
+export const OFFER_NOTE = 'Информация о товарах и ценах не является публичной офертой (ст. 437 ГК РФ). Договор заключается после подтверждения заказа менеджером.';
+
 const OP_LINE = `${OPERATOR.name} (ИНН ${OPERATOR.inn}, ОГРНИП ${OPERATOR.ogrnip})`;
 
 export type Block = string | { list: string[] };

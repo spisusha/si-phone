@@ -175,3 +175,11 @@
 .profile-legal {
   margin-top: 16px;
 }
+
+.profile-seller {
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--color-muted);
+  margin: 12px 16px 0;
+}

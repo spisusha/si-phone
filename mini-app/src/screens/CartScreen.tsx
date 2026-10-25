@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { cartItemDisplay } from '../domain/variantFormat';
 import { lineKey } from '../domain/types';
+import { OFFER_NOTE, SELLER_LINE } from '../domain/legal';
 import { plural } from '../domain/plural';
 import { IconInfo } from '../components/icons';
 import EmptyState from '../components/EmptyState';
@@ -76,6 +77,7 @@ export default function CartScreen() {
         рынка цены на сайте носят информативный характер. Менеджер зафиксирует для
         вас лучшее предложение после размещения заказа!</span>
       </p>
+      <p className="cart-legal">{OFFER_NOTE} {SELLER_LINE}</p>
 
       {!nativeMain && (
         <div className="action-bar">
