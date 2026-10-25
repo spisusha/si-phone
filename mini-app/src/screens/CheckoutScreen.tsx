@@ -200,7 +200,7 @@ export default function CheckoutScreen() {
           <span className="tg-row__value checkout-summary__total">{total().toLocaleString('ru-RU')} ₽</span>
         </div>
       </div>
-      <p className="tg-section-footer">Цену и наличие менеджер подтвердит после заказа.</p>
+      <p className="tg-section-footer">Цену и наличие менеджер подтвердит после заказа — с этого момента заказ считается принятым.</p>
 
       <div className="tg-group checkout-consent">
         <label className="tg-row checkout-consent__row">
