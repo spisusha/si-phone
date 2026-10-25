@@ -2,11 +2,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
 import { verifyInitData, type TgUser } from '../_shared/telegramInitData.ts';
 import { strapSizes } from '../_shared/strap.ts';
+import { fingerprint } from '../_shared/privacy.ts';
 
 // Всё, что приходит из мини-аппа, может быть подделано. Поэтому сервер:
 // - узнаёт покупателя только по проверенной initData Telegram;
 // - берёт цены и наличие из базы и сам считает сумму (цены с телефона не принимаются);
 // - ограничивает частоту заказов, чтобы нельзя было завалить админов спамом.
+// Персональные данные (152-ФЗ): имя, ник, телефон и адрес уходят только менеджерам в Telegram.
+// В базу — обезличенный заказ и отпечаток покупателя для лимита (стирается через сутки).
 
 const INIT_DATA_MAX_AGE_SEC = 24 * 60 * 60; // initData не обновляется, пока мини-апп открыт
 const MAX_POSITIONS = 20;
@@ -163,20 +166,14 @@ Deno.serve(withCors(async (req) => {
     /* ── 5. сохранить (с лимитом) и отправить админам ── */
     const orderId = crypto.randomUUID();
     const contacts: Contacts = { deliveryMethod, paymentMethod, address, phone };
-    const payload = {
-      items: lines,
-      total,
-      deliveryMethod,
-      address: deliveryMethod === 'delivery' ? address : null,
-      phone: phone || null,
-      paymentMethod,
-      tgUser: { id: user.id, first_name: user.first_name, last_name: user.last_name, username: user.username },
-    };
+    // Только состав заказа — без имени, ника, телефона и адреса
+    const payload = { items: lines, total, deliveryMethod, paymentMethod };
+    const userKey = await fingerprint('order-user', String(user.id));
 
     // Лимит частоты и запись заказа — одной операцией в базе с блокировкой по пользователю:
     // пачка одновременных запросов не обойдёт лимит. Не смогли проверить — заказ не принимаем.
     const { data: accepted, error: saveErr } = await sb.rpc('create_order_limited', {
-      p_id: orderId, p_tg_user_id: user.id, p_payload: payload, p_total: total,
+      p_id: orderId, p_user_key: userKey, p_payload: payload, p_total: total,
       p_limit_10min: LIMIT_10_MIN, p_limit_day: LIMIT_DAY,
     });
     if (saveErr) {
@@ -211,8 +208,13 @@ Deno.serve(withCors(async (req) => {
       }
     }
 
-    // Заказ уже сохранён в базе; если Telegram не ответил — админы увидят его в базе.
-    if (tgSent === 0) console.error('create-order: order saved but not delivered to Telegram', orderId);
+    // Контакты покупателя есть только в сообщении менеджерам. Не дошло ни одно — заказ без связи
+    // бесполезен: убираем его (лимит освобождается) и просим написать менеджеру напрямую.
+    if (tgSent === 0) {
+      console.error('create-order: not delivered to Telegram', orderId);
+      await sb.from('orders').delete().eq('id', orderId);
+      return json({ ok: false, error: 'Не получилось передать заказ менеджеру. Попробуйте ещё раз или напишите менеджеру' }, 502);
+    }
     return json({ ok: true, orderId, total, items: lines });
   } catch (err) {
     console.error('create-order error:', err);

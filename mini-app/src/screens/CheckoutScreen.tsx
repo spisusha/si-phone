@@ -169,7 +169,7 @@ export default function CheckoutScreen() {
           />
         </label>
       </div>
-      <p className="tg-section-footer">Необязательно — менеджер и так напишет вам в Telegram.</p>
+      <p className="tg-section-footer">Необязательно — менеджер и так напишет вам в Telegram. Контакты и адрес получит только менеджер, мы их не храним.</p>
 
       <div className="tg-group checkout-summary">
         <div className="tg-row">

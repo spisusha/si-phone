@@ -22,9 +22,10 @@ async function whoIsAdmin(req: Request, body: Record<string, unknown>): Promise<
   const botToken = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '';
   const admins = (Deno.env.get('TELEGRAM_ADMIN_CHAT_IDS') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   const user = await verifyInitData(String(body.initData ?? ''), botToken, INIT_DATA_MAX_AGE_SEC);
-  if (!user || !admins.includes(String(user.id))) return null;
-  const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени';
-  return `${name}${user.username ? ` @${user.username}` : ''} (${user.id})`.slice(0, 120);
+  const n = user ? admins.indexOf(String(user.id)) : -1;
+  if (n < 0) return null;
+  // В историю — не имя и ник (152-ФЗ), а номер в списке TELEGRAM_ADMIN_CHAT_IDS: «Админ 1», «Админ 2»…
+  return `Админ ${n + 1}`;
 }
 
 const int = (v: unknown) => (typeof v === 'number' && Number.isInteger(v) ? v : Number.NaN);

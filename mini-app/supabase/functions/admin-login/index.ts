@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
+import { fingerprint } from '../_shared/privacy.ts';
 import { signAdminToken, signDeviceToken, verifyDeviceToken } from '../_shared/adminAuth.ts';
 
 // Ограничение подбора пароля за 15 минут:
@@ -83,7 +84,7 @@ Deno.serve(withCors(async (req) => {
     // Попытка записывается ДО проверки пароля одной операцией в базе (с блокировкой по адресу),
     // поэтому пачка одновременных запросов не обойдёт лимит.
     const { data: attemptId, error: limitErr } = await sb.rpc('admin_login_begin', {
-      p_ip: ip,
+      p_ip_key: await fingerprint('login-ip', ip), // в базу — только отпечаток адреса, сутки
       p_window_min: WINDOW_MIN,
       p_max_fails: trusted ? MAX_FAILS_PER_IP_TRUSTED : MAX_FAILS_PER_IP,
       p_max_global: trusted ? null : MAX_FAILS_GLOBAL,
