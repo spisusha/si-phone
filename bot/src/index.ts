@@ -42,6 +42,21 @@ interface Env {
   ADMIN_CHAT_ID: string; // chat_id админов через запятую: кнопка «Админка» и добавление отзывов
   WEBHOOK_SECRET: string; // секрет вебхука: Telegram присылает его в X-Telegram-Bot-Api-Secret-Token
   KV: KVNamespace;
+  SUPABASE_URL?: string; // база магазина — для ежедневной «побудки»
+  SUPABASE_ANON_KEY?: string; // публичный ключ магазина (тот же, что на сайте), секрет воркера
+}
+
+// Бесплатный Supabase засыпает, если неделю к нему никто не обращается. Раз в день бот
+// делает лёгкий запрос к каталогу (одна строка) — магазин не уснёт, даже если год без покупателей.
+async function pingSupabase(env: Env): Promise<void> {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    console.error("keepalive: SUPABASE_URL или SUPABASE_ANON_KEY не заданы");
+    return;
+  }
+  const res = await fetch(`${env.SUPABASE_URL}/rest/v1/catalog_models?select=id&limit=1`, {
+    headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: `Bearer ${env.SUPABASE_ANON_KEY}` },
+  });
+  if (!res.ok) console.error("keepalive: Supabase ответил", res.status);
 }
 
 type Keyboard = { inline_keyboard: Array<Array<Record<string, unknown>>> };
@@ -93,6 +108,11 @@ export default {
       console.error(err);
     }
     return new Response("OK", { status: 200 }); // Telegram требует 200 даже при ошибке
+  },
+
+  // Расписание из wrangler.toml ([triggers] crons) — ежедневная «побудка» базы магазина
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(pingSupabase(env));
   },
 };
 

@@ -8,6 +8,11 @@ compatibility_date = "2024-01-01"
 # Публичные переменные (не секреты)
 [vars]
 MINI_APP_URL = "https://si-phone.vercel.app/"
+SUPABASE_URL = "https://zudohmttvlibpugravgb.supabase.co"
+
+# Раз в день (07:00 UTC = 10:00 МСК) — лёгкий запрос к базе магазина, чтобы бесплатный Supabase не засыпал
+[triggers]
+crons = ["0 7 * * *"]
 
 # KV для хранения истории диалогов (последние 8 сообщений на пользователя)
 [[kv_namespaces]]
@@ -16,5 +21,6 @@ id = "1cf8aedc7538453988ffd1d59d155f0c"
 preview_id = "c659c4ff97574d04bc4407b36b9e4374"
 
 # Секреты (в репозиторий не кладём): TELEGRAM_BOT_TOKEN, WEBHOOK_SECRET,
-# ADMIN_CHAT_ID — chat_id админов через запятую (кто может /addreview и получает уведомления).
+# ADMIN_CHAT_ID — chat_id админов через запятую (кто может /addreview и получает уведомления),
+# SUPABASE_ANON_KEY — публичный ключ магазина (для ежедневной «побудки» базы).
 # Задать: npx wrangler secret put ИМЯ
