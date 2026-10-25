@@ -29,7 +29,7 @@ export const PRIVACY_POLICY: LegalDoc = {
       body: [
         `Оператор персональных данных — ${OP_LINE}, ${OPERATOR.city}.`,
         `Связаться по вопросам персональных данных: e-mail ${OPERATOR.email}, телефон ${OPERATOR.phone}, Telegram ${OPERATOR.telegram}.`,
-        'Политика действует для Telegram-бота @si_phone_bot и мини-приложения магазина Si Phone (si-phone.vercel.app), в том числе когда оно открыто внутри Telegram.',
+        'Политика действует для Telegram-бота @si_phone_bot и мини-приложения магазина Si Phone (si-phone.pages.dev), в том числе когда оно открыто внутри Telegram.',
       ],
     },
     {

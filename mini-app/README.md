@@ -37,4 +37,8 @@ brand/splash/   экран загрузки для BotFather
 - `admin-login` — вход в админку из браузера: пароль с лимитом попыток, выдаёт подписанный токен.
 - `admin-catalog` — все действия админки (цены, прайсы, наценки, курс, новые позиции, фото, история). В Telegram пускает по подписи `initData` и списку админов, в браузере — по токену.
 
-Выкладка функций — `npx supabase functions deploy <имя> --no-verify-jwt` (подпись проверяет сама функция).
+## Выкладка
+
+- **Сайт** — Cloudflare Pages, проект `si-phone` (https://si-phone.pages.dev): `npm run build`, затем `npx wrangler pages deploy dist --project-name si-phone --branch main` (из папки `mini-app`, wrangler — из `bot/`). Вместе с сайтом выкладывается `functions/api/catalog.ts` — каталог из кэша (обновление раз в минуту; секрет проекта `SUPABASE_ANON_KEY`). Заголовки безопасности — `public/_headers`.
+- **Функции Supabase** — `npx supabase functions deploy <имя> --no-verify-jwt` (подпись проверяет сама функция). Разрешённые адреса сайта — секрет `ALLOWED_ORIGINS`.
+- Старые адреса на Vercel (`si-phone.vercel.app`, `mini-app-andrew.vercel.app`) перенаправляют на новый (`vercel.json`).

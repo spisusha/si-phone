@@ -36,6 +36,7 @@ interface ItemRow {
   updated_at: string;
 }
 
+// Те же колонки — в functions/api/catalog.ts (кэш каталога на Cloudflare): менять вместе
 const ITEM_COLUMNS = 'id, model_id, name, year, storage, color, color_hex, sim, size, chip, ram_ssd, band, keyboard, price, status, photo_url, extra_photos, confirmed_at, updated_at';
 const PAGE = 1000; // Supabase отдаёт не больше 1000 строк за запрос
 
@@ -74,7 +75,23 @@ function itemOptions(it: ItemRow, category: Category, title: string): VariantOpt
 
 let cache: Promise<{ families: ProductFamily[]; variants: Variant[] }> | null = null;
 
+// На Cloudflare каталог отдаёт /api/catalog (functions/api/catalog.ts) — копия, обновляемая раз в минуту,
+// чтобы при наплыве покупателей база не тормозила. Нет такого адреса (локально, Vercel) или он
+// не ответил — грузим из Supabase напрямую, как раньше.
+async function fetchCached(): Promise<{ models: ModelRow[]; items: ItemRow[] } | null> {
+  try {
+    const r = await fetch('/api/catalog');
+    if (!r.ok || !r.headers.get('content-type')?.includes('application/json')) return null;
+    const d = (await r.json()) as { models?: ModelRow[]; items?: ItemRow[] };
+    return Array.isArray(d.models) && Array.isArray(d.items) && d.items.length > 0 ? { models: d.models, items: d.items } : null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchRows(): Promise<{ models: ModelRow[]; items: ItemRow[] }> {
+  const cached = await fetchCached();
+  if (cached) return cached;
   if (!supabase) throw new Error('Supabase не настроен: заполните .env.local по образцу .env.example');
   const sb = supabase;
   const modelsReq = sb.from('catalog_models').select('id, category, title, sort, created_at').order('sort', { ascending: false });

@@ -2,7 +2,7 @@
 
 **Интернет-магазин внутри Telegram:** покупатель открывает бота, листает каталог iPhone, iPad, MacBook, Apple Watch и AirPods, выбирает комплектацию и оформляет заказ, не выходя из Telegram. Заказ сразу приходит менеджерам в чат.
 
-**Открыть магазин:** [@si_phone_bot](https://t.me/si_phone_bot) · веб-версия — [si-phone.vercel.app](https://si-phone.vercel.app)
+**Открыть магазин:** [@si_phone_bot](https://t.me/si_phone_bot) · веб-версия — [si-phone.pages.dev](https://si-phone.pages.dev)
 
 <p>
   <img src="docs/screenshots/home.jpg" width="200" alt="Главная: товары по цветам">
@@ -35,15 +35,15 @@
 
 | Часть | Технологии | Где работает |
 |---|---|---|
-| `mini-app/` — витрина и админка | React 19, TypeScript, Vite, Zustand, Telegram WebApp API | Vercel |
+| `mini-app/` — витрина и админка | React 19, TypeScript, Vite, Zustand, Telegram WebApp API | Cloudflare Pages (+ функция кэша каталога) |
 | `mini-app/supabase/` — база и сервер | PostgreSQL (Supabase), RLS, Edge Functions на Deno, pg_cron | Supabase |
 | `bot/` — Telegram-бот | TypeScript, Cloudflare Workers, KV | Cloudflare |
 
 ```
 Покупатель в Telegram
    ├─ бот (Cloudflare Worker) ─ кнопки, ответы, отзывы
-   └─ мини-приложение (Vercel)
-        ├─ каталог ──────────► Supabase (только чтение)
+   └─ мини-приложение (Cloudflare Pages)
+        ├─ каталог ──────────► /api/catalog (кэш на минуту) ─► Supabase (только чтение)
         ├─ заказ ────────────► create-order ─► база + сообщение менеджерам
         └─ админка ──────────► admin-login, admin-catalog (только для админов)
 ```
@@ -55,7 +55,7 @@
 - Цены и сумма заказа считаются на сервере по базе; цены из корзины не принимаются. Лимит частоты заказов.
 - Публичный ключ даёт только чтение витрины. Закупочные данные, заказы и все функции админки закрыты (RLS, токен админа).
 - Вход в админку: проверка Telegram-аккаунта по списку или пароль с лимитом попыток.
-- Ключи — только в секретах Supabase, Vercel и Cloudflare. Репозиторий проверяется Gitleaks, Semgrep и OSV-Scanner.
+- Ключи — только в секретах Supabase и Cloudflare. Репозиторий проверяется Gitleaks, Semgrep и OSV-Scanner.
 
 ## Запуск локально
 

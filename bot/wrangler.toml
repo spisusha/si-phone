@@ -7,7 +7,7 @@ compatibility_date = "2024-01-01"
 
 # Публичные переменные (не секреты)
 [vars]
-MINI_APP_URL = "https://si-phone.vercel.app/"
+MINI_APP_URL = "https://si-phone.pages.dev/"
 SUPABASE_URL = "https://zudohmttvlibpugravgb.supabase.co"
 
 # Раз в день (07:00 UTC = 10:00 МСК) — лёгкий запрос к базе магазина, чтобы бесплатный Supabase не засыпал
