@@ -8,11 +8,13 @@ import OptionSelector from '../components/OptionSelector';
 import StockBadge, { stockState } from '../components/StockBadge';
 import { hasNativeBackButton, haptic } from '../telegram/telegramWebApp';
 import type { Variant } from '../domain/types';
+import { strapSizes } from '../../supabase/functions/_shared/strap';
 import './ProductDetailScreen.css';
 import { CatalogFailed, NotFound } from '../components/EmptyState';
 
 // Экран одного товара: Apple Watch и AirPods (кроме Max).
 // У часов внутри можно сменить размер корпуса и «корпус + ремешок», не выходя назад (Роман, этап B2).
+// Размер ремешка (S/M, M/L…) выбирает покупатель — на цену не влияет, уходит менеджеру в заказе.
 
 const sizeLabel = (s: string) => s.replace(/mm$/, ' мм');
 
@@ -30,6 +32,12 @@ export default function SkuVariantScreen() {
   const variant = variants.find((v) => v.id === variantId);
   const family = variant ? families.find((f) => f.id === variant.family_id) : null;
   const isWatch = family?.category === 'Watch';
+
+  // Размеры ремешка этой позиции. Выбор помним при смене размера корпуса;
+  // если у другого ремешка такого размера нет — считаем, что размер не выбран.
+  const straps = isWatch ? strapSizes(variant?.options.band) : [];
+  const [pickedStrap, setStrap] = useState<string | undefined>();
+  const strap = straps.some((s) => s.size === pickedStrap) ? pickedStrap : undefined;
 
   // Соседи по модели: другие размеры этого же «корпуса + ремешка» и другие сочетания
   const siblings = useMemo(
@@ -65,14 +73,17 @@ export default function SkuVariantScreen() {
     navigate(`/variant/${v.id}`, { replace: true });
   };
 
-  const cartItem = {
+  const strapRequired = straps.length > 0;
+  const cartItem = strapRequired && !strap ? null : {
     variantId: variant.id,
     familyId: family.id,
     titleSnapshot: variant.name || title,
     optionsSnapshot: variant.options,
     priceSnapshot: variant.price,
     image: images[0] || '',
+    ...(strap ? { strap } : {}),
   };
+  const strapWrist = straps.find((s) => s.size === strap)?.wrist;
 
   return (
     <div className="page detail-page page--action-bar">
@@ -123,6 +134,21 @@ export default function SkuVariantScreen() {
             onChange={(s) => { const v = sizes.find((x) => x.options.size === s); if (v) go(v); }}
             format={sizeLabel}
           />
+          {straps.length > 1 && (
+            <>
+              <OptionSelector
+                label="Размер ремешка"
+                options={straps.map((s) => s.size)}
+                value={strap}
+                onChange={setStrap}
+              />
+              <p className="detail-chip-info">
+                {strapWrist
+                  ? `На запястье ${strapWrist}. Не уверены — менеджер подскажет.`
+                  : 'Выберите по обхвату запястья — на цену не влияет.'}
+              </p>
+            </>
+          )}
           <ul className="watch-specs__list">
             {caseName && <li>Корпус: {caseName}</li>}
             {band && <li>Ремешок: {band}</li>}
@@ -138,7 +164,7 @@ export default function SkuVariantScreen() {
 
       <p className="detail-disclaimer">*Цена и наличие могут меняться</p>
 
-      <AddToCart item={cartItem} inStock={variant.in_stock} askManager={variant.status === 'уточнить'} />
+      <AddToCart item={cartItem} inStock={variant.in_stock} askManager={variant.status === 'уточнить'} chooseText="Выберите размер ремешка" />
     </div>
   );
 }

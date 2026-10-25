@@ -19,8 +19,12 @@ dist/
 .claude/*
 !.claude/launch.json
 
-# Фото каталога — официальные фото Apple, в открытый репозиторий не кладём (живут в хранилище Supabase)
-mini-app/supabase/catalog/photos/
+# Первичное наполнение каталога (таблица с закупочными ценами, фото Apple, скрипты) — только локально:
+# закупка — коммерческая тайна, каталог и фото уже живут в Supabase
+mini-app/supabase/catalog/
 
-# Таблица каталога с закупочными ценами — коммерческая тайна, в открытый репозиторий не кладём (собирается generate.mjs, живёт в Supabase)
-mini-app/supabase/catalog/si-phone-catalog.*
+# Рабочие заметки и инструкции для ИИ-помощников (план, наценки, поставщики) — только локально
+PLAN.md
+CLAUDE.md
+AGENTS.md
+NEXT-CHAT-PROMPT.md

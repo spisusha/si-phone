@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
-import type { CartItem } from '../domain/types';
+import { lineKey, type CartItem } from '../domain/types';
 import { useTelegramMainButton } from '../telegram/hooks';
 import { haptic } from '../telegram/telegramWebApp';
 import './AddToCart.css';
@@ -13,6 +13,8 @@ interface Props {
   inStock: boolean;
   /** Позиция «уточнить»: цену и наличие подтверждает менеджер, в корзину пока нельзя. */
   askManager?: boolean;
+  /** Текст, когда item = null (например, «Выберите размер ремешка»). */
+  chooseText?: string;
 }
 
 /**
@@ -22,10 +24,10 @@ interface Props {
  * значок корзины в меню подпрыгивает (выбор Романа, этап 5.1).
  * Без точек-разделителей (Роман, B2): «В корзину» слева, цена справа.
  */
-export default function AddToCart({ item, inStock, askManager }: Props) {
+export default function AddToCart({ item, inStock, askManager, chooseText }: Props) {
   const navigate = useNavigate();
   const add = useCartStore((s) => s.add);
-  const inCart = useCartStore((s) => !!item && s.items.some((i) => i.variantId === item.variantId));
+  const inCart = useCartStore((s) => !!item && s.items.some((i) => lineKey(i) === lineKey(item)));
 
   const handleAdd = () => {
     if (!item || !inStock) return;
@@ -34,7 +36,7 @@ export default function AddToCart({ item, inStock, askManager }: Props) {
   };
 
   const disabled = !item || !inStock;
-  const text = !item ? 'Выберите опции'
+  const text = !item ? (chooseText ?? 'Выберите опции')
     : !inStock && askManager ? 'Цену и наличие уточните у менеджера'
     : !inStock ? 'Нет в наличии'
     : inCart ? 'Перейти в корзину'

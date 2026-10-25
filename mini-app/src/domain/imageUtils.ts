@@ -35,10 +35,3 @@ export function getDisplayImages(
 
   return [];
 }
-
-export function getFirstImage(
-  variant: Variant | null | undefined,
-  family: ProductFamily | null | undefined,
-): string {
-  return getDisplayImages(variant, family)[0] || '/placeholder.svg';
-}

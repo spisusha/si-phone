@@ -47,8 +47,6 @@ function normalizeIp(ip: string): string {
 
 // Адрес клиента — из заголовка, который ставит инфраструктура, а не браузер.
 // Левую часть x-forwarded-for клиент подделывает сам, поэтому её не берём.
-// После выкладки проверить: адрес определяется (не 'unknown') и cf-connecting-ip
-// нельзя подменить своим заголовком (см. DEPLOY-SECURITY.md).
 function clientIp(req: Request): string {
   const cf = req.headers.get('cf-connecting-ip')?.trim();
   if (cf) return normalizeIp(cf);

@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { corsHeaders, withCors } from '../_shared/cors.ts';
 import { verifyInitData, type TgUser } from '../_shared/telegramInitData.ts';
+import { strapSizes } from '../_shared/strap.ts';
 
 // Всё, что приходит из мини-аппа, может быть подделано. Поэтому сервер:
 // - узнаёт покупателя только по проверенной initData Telegram;
@@ -14,10 +15,11 @@ const LIMIT_10_MIN = 3;
 const LIMIT_DAY = 20;
 const ITEM_ID_RE = /^[1-9]\d{0,6}$/; // ID товара из таблицы каталога: 1, 2, 3…
 const PHONE_RE = /^[+\d\s()-]{5,32}$/;
+const STRAP_RE = /^(|S|M|L|S\/M|M\/L)$/; // пусто — товар без выбора размера
 
 interface RequestBody {
   initData?: string;
-  items?: { variantId?: string; qty?: number }[];
+  items?: { variantId?: string; qty?: number; strap?: string }[];
   deliveryMethod?: string;
   address?: string;
   phone?: string;
@@ -98,17 +100,21 @@ Deno.serve(withCors(async (req) => {
       return json({ ok: false, code: 'not_telegram', error: 'Откройте магазин через Telegram, чтобы оформить заказ' }, 401);
     }
 
-    /* ── 2. что заказали: только id и количество ── */
-    const qtyById = new Map<string, number>();
+    /* ── 2. что заказали: id, количество и размер ремешка у часов ── */
+    // Строка заказа = «товар + размер ремешка»: одни часы с S/M и с M/L — две строки.
+    const wanted = new Map<string, { id: string; strap: string; qty: number }>();
     for (const it of Array.isArray(body.items) ? body.items : []) {
       const id = String(it?.variantId ?? '');
       const qty = Number(it?.qty);
-      if (!ITEM_ID_RE.test(id) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY) {
+      const strap = String(it?.strap ?? '');
+      if (!ITEM_ID_RE.test(id) || !Number.isInteger(qty) || qty < 1 || qty > MAX_QTY || !STRAP_RE.test(strap)) {
         return json({ ok: false, error: 'Некорректная корзина' }, 400);
       }
-      qtyById.set(id, Math.min(MAX_QTY, (qtyById.get(id) ?? 0) + qty));
+      const key = strap ? `${id}|${strap}` : id;
+      const prev = wanted.get(key);
+      wanted.set(key, { id, strap, qty: Math.min(MAX_QTY, (prev?.qty ?? 0) + qty) });
     }
-    if (qtyById.size === 0 || qtyById.size > MAX_POSITIONS) {
+    if (wanted.size === 0 || wanted.size > MAX_POSITIONS) {
       return json({ ok: false, error: 'Некорректная корзина' }, 400);
     }
 
@@ -125,26 +131,31 @@ Deno.serve(withCors(async (req) => {
     const sb = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
 
     /* ── 4. цены и наличие — из базы ── */
-    const ids = [...qtyById.keys()];
+    const ids = [...new Set([...wanted.values()].map((w) => w.id))];
     // Каталог v2: товар = строка catalog_items. Позиции «уточнить» и скрытые заказать нельзя —
     // их цену и наличие сначала подтверждает менеджер.
     const { data: items, error: iErr } = await sb.from('catalog_items')
-      .select('id, name, price, status, visible').in('id', ids.map(Number));
+      .select('id, name, price, status, visible, band').in('id', ids.map(Number));
     if (iErr) throw new Error(`catalog_items: ${iErr.message}`);
 
     const lines: OrderLine[] = [];
-    for (const id of ids) {
-      const it = items?.find((x) => String(x.id) === id);
+    for (const w of wanted.values()) {
+      const it = items?.find((x) => String(x.id) === w.id);
       const price = Number(it?.price);
       if (!it || !it.visible || it.status !== 'в наличии' || !(price > 0)) {
         return json({ ok: false, code: 'stale_cart', error: 'Часть товаров закончилась или изменилась. Обновите корзину' }, 409);
       }
+      // Размер ремешка — только из тех, что бывают у этого ремешка. Корзина со старой версии
+      // (без размера) заказ не ломает: менеджер уточнит размер у покупателя.
+      const sizes = strapSizes(it.band).map((s) => s.size);
+      if (w.strap && !sizes.includes(w.strap)) return json({ ok: false, error: 'Некорректная корзина' }, 400);
+      const options = w.strap ? `ремешок ${w.strap}` : sizes.length ? 'размер ремешка уточнить' : '';
       lines.push({
-        variantId: id,
+        variantId: w.id,
         title: String(it.name), // полное название из таблицы: модель, память, цвет, SIM…
-        options: '',
+        options,
         price,
-        qty: qtyById.get(id)!,
+        qty: w.qty,
       });
     }
     const total = lines.reduce((s, l) => s + l.price * l.qty, 0);

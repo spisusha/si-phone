@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../store/cartStore';
 import { createOrder } from '../api/orderRepo';
 import { cartItemDisplay } from '../domain/variantFormat';
+import { lineKey } from '../domain/types';
 import { plural } from '../domain/plural';
 import { getTgUser, haptic, setClosingConfirmation } from '../telegram/telegramWebApp';
 import { useTelegramMainButton } from '../telegram/hooks';
@@ -34,7 +35,7 @@ export default function CheckoutScreen() {
     setSubmitting(true);
 
     const result = await createOrder({
-      items: items.map((i) => ({ variantId: i.variantId, qty: i.qty })),
+      items: items.map((i) => ({ variantId: i.variantId, qty: i.qty, ...(i.strap ? { strap: i.strap } : {}) })),
       deliveryMethod: delivery,
       address: delivery === 'delivery' ? address.trim() : undefined,
       phone: phone.trim() || undefined,
@@ -48,7 +49,7 @@ export default function CheckoutScreen() {
       return;
     }
 
-    // На экране заказа — цены и сумма, которые посчитал сервер (total -1 — демо-режим без базы).
+    // На экране заказа — цены и сумма, которые посчитал сервер.
     const serverPrice = new Map(result.items.map((l) => [l.variantId, l.price]));
     const payload: OrderPayload = {
       items: items.map((i) => ({ ...i, priceSnapshot: serverPrice.get(i.variantId) ?? i.priceSnapshot })),
@@ -105,7 +106,7 @@ export default function CheckoutScreen() {
         {items.map((item) => {
           const { title, subtitle } = cartItemDisplay(item);
           return (
-            <div key={item.variantId} className="tg-row checkout-item">
+            <div key={lineKey(item)} className="tg-row checkout-item">
               <img className="checkout-item__img" src={item.image || '/placeholder.svg'} alt="" />
               <div className="tg-row__main">
                 <span className="tg-row__title">{title}</span>

@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CartItem } from '../domain/types';
+import { lineKey, type CartItem } from '../domain/types';
+
+// Корзина. Строка — «позиция + размер ремешка» (lineKey): одни часы с S/M и с M/L — две строки.
 
 interface CartState {
   items: CartItem[];
   add: (item: Omit<CartItem, 'qty'>) => void;
-  remove: (variantId: string) => void;
-  setQty: (variantId: string, qty: number) => void;
+  remove: (key: string) => void;
+  setQty: (key: string, qty: number) => void;
   clear: () => void;
   total: () => number;
   count: () => number;
@@ -19,26 +21,21 @@ export const useCartStore = create<CartState>()(
 
       add: (item) =>
         set((s) => {
-          const existing = s.items.find((i) => i.variantId === item.variantId);
+          const key = lineKey(item);
+          const existing = s.items.find((i) => lineKey(i) === key);
           if (existing) {
-            return {
-              items: s.items.map((i) =>
-                i.variantId === item.variantId ? { ...i, qty: i.qty + 1 } : i
-              ),
-            };
+            return { items: s.items.map((i) => (lineKey(i) === key ? { ...i, qty: i.qty + 1 } : i)) };
           }
           return { items: [...s.items, { ...item, qty: 1 }] };
         }),
 
-      remove: (variantId) =>
-        set((s) => ({ items: s.items.filter((i) => i.variantId !== variantId) })),
+      remove: (key) =>
+        set((s) => ({ items: s.items.filter((i) => lineKey(i) !== key) })),
 
-      setQty: (variantId, qty) =>
+      setQty: (key, qty) =>
         set((s) => {
-          if (qty <= 0) return { items: s.items.filter((i) => i.variantId !== variantId) };
-          return {
-            items: s.items.map((i) => (i.variantId === variantId ? { ...i, qty } : i)),
-          };
+          if (qty <= 0) return { items: s.items.filter((i) => lineKey(i) !== key) };
+          return { items: s.items.map((i) => (lineKey(i) === key ? { ...i, qty } : i)) };
         }),
 
       clear: () => set({ items: [] }),

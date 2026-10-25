@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import { mockFamilies, mockVariants } from './mockData';
 import type { ProductFamily, Variant, VariantOptions, Category } from '../domain/types';
 import { normalizeColorKey } from '../domain/imageUtils';
 
@@ -75,26 +74,9 @@ function itemOptions(it: ItemRow, category: Category, title: string): VariantOpt
 
 let cache: Promise<{ families: ProductFamily[]; variants: Variant[] }> | null = null;
 
-// Только при разработке: «?catalog=preview» в адресе — каталог из локального файла
-// (supabase/catalog/photos/catalog-preview.json, его не коммитим), чтобы проверить витрину до выкладки базы.
-const PREVIEW_URL = '/supabase/catalog/photos/catalog-preview.json';
-function previewMode(): boolean {
-  if (!import.meta.env.DEV) return false;
-  try {
-    if (new URLSearchParams(window.location.search).get('catalog') === 'preview') sessionStorage.setItem('catalogPreview', '1');
-    return sessionStorage.getItem('catalogPreview') === '1';
-  } catch {
-    return false;
-  }
-}
-
 async function fetchRows(): Promise<{ models: ModelRow[]; items: ItemRow[] }> {
-  if (previewMode()) {
-    const res = await fetch(PREVIEW_URL);
-    if (!res.ok) throw new Error(`preview: ${res.status}`);
-    return res.json();
-  }
-  const sb = supabase!;
+  if (!supabase) throw new Error('Supabase не настроен: заполните .env.local по образцу .env.example');
+  const sb = supabase;
   const modelsReq = sb.from('catalog_models').select('id, category, title, sort, created_at').order('sort', { ascending: false });
   const items: ItemRow[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -109,7 +91,6 @@ async function fetchRows(): Promise<{ models: ModelRow[]; items: ItemRow[] }> {
 }
 
 async function loadCatalog(): Promise<{ families: ProductFamily[]; variants: Variant[] }> {
-  if (!supabase && !previewMode()) return { families: mockFamilies, variants: mockVariants };
   const { models, items } = await fetchRows();
   const modelById = new Map(models.map((m) => [m.id, m]));
 

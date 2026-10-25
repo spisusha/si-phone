@@ -2,10 +2,10 @@ import { supabase } from './supabaseClient';
 import { getInitData } from '../telegram/telegramWebApp';
 import type { DeliveryMethod, PaymentMethod } from '../domain/types';
 
-// С клиента уходит только «что хочу»: id варианта и количество.
+// С клиента уходит только «что хочу»: id варианта, количество и размер ремешка (у часов).
 // Цену и сумму считает сервер по базе — цены из корзины он не принимает.
 export interface CreateOrderRequest {
-  items: { variantId: string; qty: number }[];
+  items: { variantId: string; qty: number; strap?: string }[];
   deliveryMethod: DeliveryMethod;
   address?: string;
   phone?: string;
@@ -28,10 +28,7 @@ const NOT_IN_TELEGRAM = 'Откройте магазин через Telegram, ч
 const GENERIC_ERROR = 'Ошибка при оформлении. Попробуйте ещё раз.';
 
 export async function createOrder(req: CreateOrderRequest): Promise<CreateOrderResult> {
-  if (!supabase) {
-    console.log('[mock] Order created:', req);
-    return { ok: true, orderId: crypto.randomUUID(), total: -1, items: [] };
-  }
+  if (!supabase) return { ok: false, error: GENERIC_ERROR };
 
   const initData = getInitData();
   if (!initData) return { ok: false, error: NOT_IN_TELEGRAM };

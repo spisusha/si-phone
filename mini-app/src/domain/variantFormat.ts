@@ -41,20 +41,13 @@ export function describeOptions(opts: VariantOptions): string[] {
   return parts;
 }
 
-// Строка под названием товара в корзине и заказе — без повтора того, что уже есть в названии.
-export function cartItemSubtitle(item: Pick<CartItem, 'titleSnapshot' | 'optionsSnapshot'>): string {
-  const title = item.titleSnapshot.toLowerCase();
-  return describeOptions(item.optionsSnapshot)
-    .filter((p) => !title.includes(p.toLowerCase()))
-    .join(', ');
-}
-
 // «Apple iPhone 17 Pro Max • 256 ГБ • Cosmic Orange» → заголовок «iPhone 17 Pro Max»
 // и строка «256 ГБ · Cosmic Orange · eSIM» (из опций, а если их нет — из хвоста названия).
-export function cartItemDisplay(item: Pick<CartItem, 'titleSnapshot' | 'optionsSnapshot'>): { title: string; subtitle: string } {
+export function cartItemDisplay(item: Pick<CartItem, 'titleSnapshot' | 'optionsSnapshot' | 'strap'>): { title: string; subtitle: string } {
   // В старых корзинах части названия разделены « • », в новых — «, »
   const [head, ...rest] = item.titleSnapshot.split(/ • |, /);
   const title = head.replace(/^Apple\s+/, '');
   const fromOptions = describeOptions(item.optionsSnapshot).filter((p) => !title.toLowerCase().includes(p.toLowerCase()));
-  return { title, subtitle: (fromOptions.length ? fromOptions : rest).join(', ') };
+  const parts = fromOptions.length ? fromOptions : rest;
+  return { title, subtitle: [...parts, ...(item.strap ? [`ремешок ${item.strap}`] : [])].join(', ') };
 }

@@ -53,7 +53,12 @@ export interface CartItem {
   priceSnapshot: number;
   image: string;
   qty: number;
+  /** Размер ремешка Apple Watch (S/M, M/L, S, M, L) — выбирает покупатель, на цену не влияет */
+  strap?: string;
 }
+
+/** Строка корзины: одна позиция с разными размерами ремешка — разные строки */
+export const lineKey = (i: { variantId: string; strap?: string }) => (i.strap ? `${i.variantId}|${i.strap}` : i.variantId);
 
 export type DeliveryMethod = 'pickup' | 'delivery';
 export type PaymentMethod = 'cash' | 'online';

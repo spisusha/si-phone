@@ -5,7 +5,6 @@ import BottomNav from '../components/BottomNav';
 import HomeScreen from '../screens/HomeScreen';
 import CatalogScreen from '../screens/CatalogScreen';
 import CategoryModelsScreen from '../screens/CategoryModelsScreen';
-import ProductListScreen from '../screens/ProductListScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import SkuVariantScreen from '../screens/WatchVariantScreen';
 import CartScreen from '../screens/CartScreen';
@@ -64,7 +63,6 @@ function Layout() {
           <Route path="/catalog/:category" element={<CategoryModelsScreen />} />
           <Route path="/catalog/:category/:gen" element={<CategoryModelsScreen />} />
           <Route path="/catalog/:category/:gen/:line" element={<CategoryModelsScreen />} />
-          <Route path="/products" element={<ProductListScreen />} />
           <Route path="/product/:id" element={<ProductDetailScreen />} />
           <Route path="/variant/:variantId" element={<SkuVariantScreen />} />
           <Route path="/cart" element={<CartScreen />} />
