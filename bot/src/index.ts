@@ -17,13 +17,22 @@ import {
 } from "./config.js";
 
 // Типы для Telegram API
+interface TelegramMessage {
+  message_id: number;
+  chat: { id: number; type: string };
+  from?: { id: number; is_bot?: boolean };
+  sender_chat?: { id: number }; // пишет канал или группа, а не человек
+  is_automatic_forward?: boolean; // пост канала, автоматически попавший в группу обсуждений
+  message_thread_id?: number;
+  reply_to_message?: { message_id: number };
+  media_group_id?: string; // альбом: несколько фото одним комментарием
+  text?: string;
+  caption?: string;
+  photo?: Array<{ file_id: string }>;
+}
+
 interface TelegramUpdate {
-  message?: {
-    chat: { id: number };
-    text?: string;
-    caption?: string;
-    photo?: Array<{ file_id: string }>;
-  };
+  message?: TelegramMessage;
   callback_query?: {
     id: string;
     data: string;
@@ -31,9 +40,13 @@ interface TelegramUpdate {
   };
 }
 
-// Отзыв: фото + текст. file_id — file_id Telegram или путь к фото на сайте магазина («reviews/183.jpg»,
-// так перенесены отзывы из группы); у отзыва без фото — фирменная карточка REVIEW_NO_PHOTO.
-type Review = { file_id: string; text: string };
+// Отзыв из группы — номера комментариев: бот пересылает сам комментарий, и сверху видно
+// «Переслано от <имя>» — понятно, что писал покупатель, а не магазин. Удалит автор — пропадёт и тут.
+// Отзыв не из группы (добавлен админом вручную) — копия: фото (file_id или путь на сайте) + текст;
+// у отзыва без фото — фирменная карточка REVIEW_NO_PHOTO.
+type GroupReview = { group_ids: number[] };
+type CopyReview = { file_id: string; text: string };
+type Review = GroupReview | CopyReview;
 
 // Состояние админа при добавлении отзыва
 type AddReviewState = { step: "photo"; file_id?: string } | { step: "text"; file_id: string };
@@ -46,6 +59,9 @@ interface Env {
   KV: KVNamespace;
   SUPABASE_URL?: string; // база магазина — для ежедневной «побудки»
   SUPABASE_ANON_KEY?: string; // публичный ключ магазина (тот же, что на сайте), секрет воркера
+  REVIEWS_GROUP_ID?: string; // группа обсуждений канала, где под постом оставляют отзывы
+  REVIEWS_POST_ID?: string; // номер поста «Ваши отзывы» в этой группе
+  REVIEW_CHAT_IDS?: string; // кому приходят новые отзывы на одобрение (секрет; не задан — админам)
 }
 
 // Бесплатный Supabase засыпает, если неделю к нему никто не обращается. Раз в день бот
@@ -73,8 +89,18 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+const idList = (s?: string) => (s || "").split(",").map((id) => id.trim()).filter(Boolean);
+
 function isAdmin(env: Env, chatId: number): boolean {
-  return (env.ADMIN_CHAT_ID || "").split(",").map((id) => id.trim()).filter(Boolean).includes(String(chatId));
+  return idList(env.ADMIN_CHAT_ID).includes(String(chatId));
+}
+
+function reviewModerators(env: Env): string[] {
+  return env.REVIEW_CHAT_IDS ? idList(env.REVIEW_CHAT_IDS) : idList(env.ADMIN_CHAT_ID);
+}
+
+function isModerator(env: Env, chatId: number): boolean {
+  return isAdmin(env, chatId) || reviewModerators(env).includes(String(chatId));
 }
 
 // Общие кнопки
@@ -104,7 +130,9 @@ export default {
 
     try {
       const update: TelegramUpdate = await request.json();
-      if (update.message) await handleMessage(env, update.message);
+      // В группах и каналах бот не разговаривает — только замечает новые отзывы
+      if (update.message?.chat.type === "private") await handleMessage(env, update.message);
+      else if (update.message) await handleGroupMessage(env, update.message);
       else if (update.callback_query) await handleCallback(env, update.callback_query);
     } catch (err) {
       console.error(err);
@@ -120,7 +148,7 @@ export default {
 
 /* ── Сообщения ── */
 
-async function handleMessage(env: Env, message: NonNullable<TelegramUpdate["message"]>): Promise<void> {
+async function handleMessage(env: Env, message: TelegramMessage): Promise<void> {
   const chatId = message.chat.id;
   const text = message.text?.trim() || "";
   const command = text.split(/[\s@]/)[0].toLowerCase();
@@ -239,9 +267,19 @@ async function handleCallback(env: Env, cq: NonNullable<TelegramUpdate["callback
   else if (data.startsWith("faq_q:")) await showFaqAnswer(env, chatId, messageId, data.slice(6));
   else if (data === "contacts" || data === "support") await sendContacts(env, chatId);
   else if (data === "reviews") await showReview(env, chatId, 0);
-  else if (data.startsWith("reviews_")) {
-    const index = parseInt(data.slice(8), 10);
-    if (!isNaN(index)) await showReview(env, chatId, index, messageId);
+  else if (data.startsWith("rv:") || data.startsWith("reviews_")) {
+    // Листание: убираем показанный отзыв (пересланные сообщения + строку с кнопками) и показываем другой.
+    // rv:<куда>:<первое пересланное>:<сколько>; reviews_<куда> — кнопки со старых сообщений.
+    const [target, first, count] = data.replace(/^reviews_/, "rv:").slice(3).split(":").map((n) => parseInt(n, 10));
+    if (!isNaN(target)) {
+      const old = [messageId];
+      if (first > 0 && count > 0 && count <= 10) for (let k = 0; k < count; k++) old.push(first + k);
+      await callTelegram(env, "deleteMessages", { chat_id: chatId, message_ids: old });
+      await showReview(env, chatId, target);
+    }
+  } else if ((data.startsWith("rva:") || data.startsWith("rvs:")) && isModerator(env, chatId)) {
+    const groupMsgId = parseInt(data.slice(4), 10);
+    if (groupMsgId > 0) await moderateReview(env, chatId, messageId, groupMsgId, data.startsWith("rva:"));
   } else if (data === "admin_addreview" && isAdmin(env, chatId)) await startAddReview(env, chatId);
 
   // Подтверждаем callback, чтобы убрать «часики» на кнопке
@@ -329,6 +367,21 @@ async function callTelegram(env: Env, method: string, body: Record<string, unkno
   if (!res.ok) console.error(`Telegram ${method} error:`, await res.text());
 }
 
+// Как callTelegram, но возвращает ответ Telegram (например, номера пересланных сообщений)
+async function telegramResult<T>(env: Env, method: string, body: Record<string, unknown>): Promise<T | null> {
+  const res = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => null)) as { ok?: boolean; result?: T; description?: string } | null;
+  if (!data?.ok) {
+    console.error(`Telegram ${method} error:`, data?.description ?? res.status);
+    return null;
+  }
+  return data.result ?? null;
+}
+
 async function sendMessage(env: Env, chatId: number, text: string, replyMarkup?: Keyboard): Promise<void> {
   await callTelegram(env, "sendMessage", {
     chat_id: chatId,
@@ -388,7 +441,7 @@ async function startAddReview(env: Env, chatId: number): Promise<void> {
   await sendMessage(
     env,
     chatId,
-    "Отправьте фото отзыва (скриншот, фото с покупкой) — или перешлите сюда комментарий-отзыв из группы с фото и текстом. Если фото нет — сразу текст. Отмена — /cancel",
+    "Отзывы из группы приходят на одобрение сами. Здесь — отзыв не из группы (например, из личных сообщений): отправьте фото, потом текст — или фото с подписью одним сообщением. Без фото — сразу текст. Отмена — /cancel",
   );
 }
 
@@ -417,36 +470,95 @@ async function clearAddReviewState(env: Env, chatId: number): Promise<void> {
   await env.KV.delete(ADDREVIEW_STATE_KEY(chatId));
 }
 
-async function showReview(env: Env, chatId: number, index: number, messageId?: number): Promise<void> {
+// Отзыв из группы — пересылаем комментарий (к пересланному Telegram не даёт прикрепить кнопки,
+// поэтому под ним отдельная строка «Отзыв N из M» с листанием). Кнопки помнят, какие сообщения
+// убрать при листании: rv:<куда>:<первое пересланное>:<сколько>.
+async function showReview(env: Env, chatId: number, index: number): Promise<void> {
   const reviews = await loadReviews(env);
-  if (reviews.length === 0) {
-    const msg = "Пока нет отзывов.";
-    if (messageId) await editMessage(env, chatId, messageId, msg);
-    else await sendMessage(env, chatId, msg);
+  // Комментарий в группе могли удалить — тогда показываем следующий отзыв
+  for (let tries = 0; tries < reviews.length; tries++) {
+    const i = (((index + tries) % reviews.length) + reviews.length) % reviews.length;
+    const review = reviews[i];
+    const nav = (first = 0, count = 0): Keyboard => ({
+      inline_keyboard: [
+        [
+          { text: "← Назад", callback_data: `rv:${i - 1}:${first}:${count}` },
+          { text: "Следующий →", callback_data: `rv:${i + 1}:${first}:${count}` },
+        ],
+        [shopButton(env), managerButton],
+      ],
+    });
+    const title = `⭐ Отзыв ${i + 1} из ${reviews.length}`;
+
+    if ("group_ids" in review) {
+      const sent = await telegramResult<Array<{ message_id: number }>>(env, "forwardMessages", {
+        chat_id: chatId,
+        from_chat_id: env.REVIEWS_GROUP_ID,
+        message_ids: review.group_ids,
+      });
+      if (!sent?.length) continue;
+      const ids = sent.map((m) => m.message_id).sort((a, b) => a - b);
+      const inRow = ids[ids.length - 1] - ids[0] === ids.length - 1;
+      await sendMessage(env, chatId, `${title} — из комментариев в нашей группе`, inRow ? nav(ids[0], ids.length) : nav());
+      return;
+    }
+    const caption = `${title}\n\n${review.text}`;
+    await callTelegram(env, "sendPhoto", { chat_id: chatId, photo: reviewPhoto(env, review.file_id), caption, reply_markup: nav() });
     return;
   }
-  const i = ((index % reviews.length) + reviews.length) % reviews.length;
-  const review = reviews[i];
-  const caption = `Отзыв ${i + 1} из ${reviews.length}\n\n${review.text}`;
-  const keyboard: Keyboard = {
-    inline_keyboard: [
-      [
-        { text: "← Назад", callback_data: `reviews_${i - 1}` },
-        { text: "Следующий →", callback_data: `reviews_${i + 1}` },
-      ],
-      [shopButton(env), managerButton],
-    ],
-  };
+  await sendMessage(env, chatId, "Пока нет отзывов.");
+}
 
-  const photo = reviewPhoto(env, review.file_id);
-  if (messageId) {
-    await callTelegram(env, "editMessageMedia", {
-      chat_id: chatId,
-      message_id: messageId,
-      media: { type: "photo", media: photo, caption },
-      reply_markup: keyboard,
-    });
-  } else {
-    await callTelegram(env, "sendPhoto", { chat_id: chatId, photo, caption, reply_markup: keyboard });
+/* ── Новые отзывы из группы — на одобрение ── */
+
+const PENDING_KEY = (groupMsgId: number) => `rvp:${groupMsgId}`;
+const ALBUM_KEY = (album: string, groupMsgId?: number) => `rvmg:${album}:${groupMsgId ?? ""}`;
+const MONTH = 30 * 24 * 60 * 60;
+
+// Комментарий покупателя под постом «Ваши отзывы» → Артёму и Андрею: сам комментарий и кнопки
+// «Добавить в отзывы» / «Пропустить». Сами по себе в бота отзывы не попадают — спам и случайные
+// сообщения не проскочат.
+async function handleGroupMessage(env: Env, m: TelegramMessage): Promise<void> {
+  const postId = Number(env.REVIEWS_POST_ID);
+  if (!env.REVIEWS_GROUP_ID || String(m.chat.id) !== env.REVIEWS_GROUP_ID || !postId) return;
+  if (m.message_thread_id !== postId && m.reply_to_message?.message_id !== postId) return;
+  // Не покупатель: бот, канал, сам пост или ответ магазина в комментариях
+  if (!m.from || m.from.is_bot || m.sender_chat || m.is_automatic_forward || isModerator(env, m.from.id)) return;
+
+  if (m.media_group_id) await env.KV.put(ALBUM_KEY(m.media_group_id, m.message_id), "1", { expirationTtl: MONTH });
+  if (!(m.text || m.caption || "").trim()) return; // фото без подписи — часть альбома, само по себе не отзыв
+  await env.KV.put(PENDING_KEY(m.message_id), JSON.stringify({ album: m.media_group_id ?? null }), { expirationTtl: MONTH });
+
+  const keyboard: Keyboard = {
+    inline_keyboard: [[
+      { text: "✅ Добавить в отзывы", callback_data: `rva:${m.message_id}` },
+      { text: "Пропустить", callback_data: `rvs:${m.message_id}` },
+    ]],
+  };
+  for (const id of reviewModerators(env)) {
+    await callTelegram(env, "forwardMessage", { chat_id: id, from_chat_id: m.chat.id, message_id: m.message_id });
+    await sendMessage(env, Number(id), "⭐ Новый комментарий под постом с отзывами. Добавить его в отзывы бота?", keyboard);
   }
+}
+
+async function moderateReview(env: Env, chatId: number, messageId: number, groupMsgId: number, approve: boolean): Promise<void> {
+  const reviews = await loadReviews(env);
+  if (reviews.some((r) => "group_ids" in r && r.group_ids.includes(groupMsgId))) {
+    return editMessage(env, chatId, messageId, "Этот отзыв уже в боте ✅");
+  }
+  if (!approve) return editMessage(env, chatId, messageId, "Пропущен — в отзывы бота не попал.");
+
+  // Альбом — все его фото одним отзывом
+  const ids = new Set([groupMsgId]);
+  let album: string | null = null;
+  try {
+    album = (JSON.parse((await env.KV.get(PENDING_KEY(groupMsgId))) ?? "{}") as { album?: string | null }).album ?? null;
+  } catch { /* нет записи — одно сообщение */ }
+  if (album) {
+    const list = await env.KV.list({ prefix: ALBUM_KEY(album) });
+    for (const k of list.keys) ids.add(Number(k.name.split(":").pop()));
+  }
+  reviews.unshift({ group_ids: [...ids].filter((n) => n > 0).sort((a, b) => a - b) });
+  await env.KV.put(REVIEWS_KEY, JSON.stringify(reviews));
+  await editMessage(env, chatId, messageId, "✅ Добавлен в отзывы — показывается первым.");
 }

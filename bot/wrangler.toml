@@ -9,6 +9,9 @@ compatibility_date = "2024-01-01"
 [vars]
 MINI_APP_URL = "https://si-phone.pages.dev/"
 SUPABASE_URL = "https://zudohmttvlibpugravgb.supabase.co"
+# Отзывы: группа обсуждений канала «Sí phone» и пост «Ваши отзывы❗️» в ней. Бот должен быть админом группы.
+REVIEWS_GROUP_ID = "-1002273047590"
+REVIEWS_POST_ID = "9"
 
 # Раз в день (07:00 UTC = 10:00 МСК) — лёгкий запрос к базе магазина, чтобы бесплатный Supabase не засыпал
 [triggers]
