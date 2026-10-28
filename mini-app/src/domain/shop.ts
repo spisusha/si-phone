@@ -27,6 +27,16 @@ export const CONTACTS: ShopContact[] = [
   },
 ];
 
+// Заказы подтверждаем ежедневно с 10:00 до 17:00 по Москве; оформить можно в любое время.
+export const WORK_HOURS = { from: 10, to: 17, label: 'с 10:00 до 17:00' };
+
+/** Когда менеджер возьмёт заказ: null — сейчас рабочее время, иначе «сегодня с 10:00» / «завтра с 10:00». */
+export function nextWorkStart(now = new Date()): string | null {
+  const hour = (now.getUTCHours() + 3) % 24; // Москва — UTC+3 круглый год
+  if (hour >= WORK_HOURS.from && hour < WORK_HOURS.to) return null;
+  return `${hour < WORK_HOURS.from ? 'сегодня' : 'завтра'} с ${WORK_HOURS.from}:00`;
+}
+
 // Как называть категорию в тексте: «Сейчас Apple Watch нет на витрине»
 export function categoryName(c: string): string {
   return c === 'Watch' ? 'Apple Watch' : c;

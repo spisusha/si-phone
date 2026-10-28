@@ -7,6 +7,8 @@ import { lineKey } from '../domain/types';
 import { plural } from '../domain/plural';
 import { getTgUser, haptic, setClosingConfirmation } from '../telegram/telegramWebApp';
 import { useTelegramMainButton } from '../telegram/hooks';
+import { IconClock } from '../components/icons';
+import { WORK_HOURS, nextWorkStart } from '../domain/shop';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
 import './CheckoutScreen.css';
 
@@ -118,6 +120,7 @@ export default function CheckoutScreen() {
   }
 
   const count = items.reduce((n, i) => n + i.qty, 0);
+  const offHours = nextWorkStart();
 
   return (
     <div className="page checkout page--action-bar">
@@ -200,7 +203,16 @@ export default function CheckoutScreen() {
           <span className="tg-row__value checkout-summary__total">{total().toLocaleString('ru-RU')} ₽</span>
         </div>
       </div>
-      <p className="tg-section-footer">Цену и наличие менеджер подтвердит после заказа — с этого момента заказ считается принятым.</p>
+      <p className="tg-section-footer">
+        Цену и наличие менеджер подтвердит после заказа — с этого момента заказ считается принятым.
+        {!offHours && ` Заказы подтверждаем ежедневно ${WORK_HOURS.label}.`}
+      </p>
+      {offHours && (
+        <p className="hours-note">
+          <IconClock size={18} />
+          <span>Сейчас нерабочее время. Оформить заказ можно — менеджер подтвердит его {offHours}.</span>
+        </p>
+      )}
 
       <div className="tg-group checkout-consent">
         <label className="tg-row checkout-consent__row">

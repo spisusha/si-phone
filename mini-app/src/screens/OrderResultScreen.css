@@ -74,3 +74,8 @@
   font-weight: 600;
   color: var(--color-accent);
 }
+
+.hours-note.result-hours {
+  margin: 0 0 16px;
+  width: 100%;
+}

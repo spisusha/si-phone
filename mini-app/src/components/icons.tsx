@@ -76,6 +76,10 @@ export const IconPin = (p: IconProps) => (
   <Svg {...p}><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.2" /></Svg>
 );
 
+export const IconClock = (p: IconProps) => (
+  <Svg {...p}><circle cx="12" cy="12" r="9.5" /><path d="M12 7v5l3.5 2" /></Svg>
+);
+
 export const IconCart = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="9" cy="20.5" r="1" /><circle cx="19" cy="20.5" r="1" />

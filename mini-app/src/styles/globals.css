@@ -234,3 +234,25 @@ input:focus, select:focus, textarea:focus {
   white-space: nowrap;
   border: 0;
 }
+
+/* «Сейчас нерабочее время…» — в оформлении и на экране заказа */
+.hours-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  font-size: var(--fs-foot);
+  line-height: 1.4;
+  color: var(--color-text);
+  text-align: left;
+}
+
+.hours-note svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-accent);
+}

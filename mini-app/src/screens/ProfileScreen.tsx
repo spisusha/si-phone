@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { SELLER_LINE } from '../domain/legal';
 import { getTgUser } from '../telegram/telegramWebApp';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
-import { IconChat, IconPhone, IconPin, IconStar, IconTelegram } from '../components/icons';
+import { IconChat, IconClock, IconPhone, IconPin, IconStar, IconTelegram } from '../components/icons';
 import { callPhone, openMaxChat, openTelegramChat } from '../telegram/telegramWebApp';
-import { CONTACTS, type ShopContact } from '../domain/shop';
+import { CONTACTS, WORK_HOURS, type ShopContact } from '../domain/shop';
 import './ProfileScreen.css';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -58,6 +58,7 @@ export default function ProfileScreen() {
       <p className="tg-section-title">Контакты</p>
       {/* По карточке на человека; звёздочка — к кому писать в первую очередь */}
       {CONTACTS.map((c) => <ContactCard key={c.telegram} contact={c} />)}
+      <p className="profile-city profile-city--hours"><IconClock size={16} /> Заказы подтверждаем ежедневно {WORK_HOURS.label}. Оформить можно в любое время.</p>
       <p className="profile-city"><IconPin size={16} /> Москва</p>
 
       <p className="tg-section-title">Оформление</p>

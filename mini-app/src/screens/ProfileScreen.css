@@ -262,9 +262,19 @@
 
 .profile-city {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  line-height: 1.35;
   gap: 6px;
   font-size: var(--fs-foot);
   color: var(--color-muted);
   margin: 2px 4px 20px;
+}
+
+.profile-city svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.profile-city--hours {
+  margin-bottom: 8px;
 }

@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { OrderPayload } from '../domain/types';
 import { cartItemDisplay } from '../domain/variantFormat';
-import { IconBox, IconCheckCircle } from '../components/icons';
+import { IconBox, IconCheckCircle, IconClock } from '../components/icons';
 import { openTelegramChat } from '../telegram/telegramWebApp';
-import { MANAGER_URL } from '../domain/shop';
+import { MANAGER_URL, nextWorkStart } from '../domain/shop';
 import { plural } from '../domain/plural';
 import './OrderResultScreen.css';
 
@@ -46,6 +46,7 @@ export default function OrderResultScreen() {
 
   const { payload, orderId } = state;
   const count = payload.items.reduce((n, i) => n + i.qty, 0);
+  const offHours = nextWorkStart();
 
   const goHome = () => {
     sessionStorage.removeItem('lastOrder');
@@ -59,6 +60,12 @@ export default function OrderResultScreen() {
       <p className="result-subtitle">
         Менеджер напишет вам в Telegram, подтвердит цену и наличие и договорится о получении.
       </p>
+      {offHours && (
+        <p className="hours-note result-hours">
+          <IconClock size={18} />
+          <span>Сейчас нерабочее время — менеджер свяжется с вами {offHours}.</span>
+        </p>
+      )}
 
       <div className="tg-group result-group">
         <div className="tg-row">
