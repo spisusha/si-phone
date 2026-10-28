@@ -21,6 +21,7 @@ interface TelegramUpdate {
   message?: {
     chat: { id: number };
     text?: string;
+    caption?: string;
     photo?: Array<{ file_id: string }>;
   };
   callback_query?: {
@@ -30,7 +31,8 @@ interface TelegramUpdate {
   };
 }
 
-// Отзыв: file_id фото + текст
+// Отзыв: фото + текст. file_id — file_id Telegram или путь к фото на сайте магазина («reviews/183.jpg»,
+// так перенесены отзывы из группы); у отзыва без фото — фирменная карточка REVIEW_NO_PHOTO.
 type Review = { file_id: string; text: string };
 
 // Состояние админа при добавлении отзыва
@@ -136,19 +138,24 @@ async function handleMessage(env: Env, message: NonNullable<TelegramUpdate["mess
     return sendMessage(env, chatId, "Отменено.");
   }
 
-  // Админ добавляет отзыв: сначала фото, потом текст
+  // Админ добавляет отзыв: фото, потом текст. Фото с подписью (например, пересланный комментарий
+  // из группы) — сразу целиком; текст без фото — отзыв с фирменной карточкой вместо фото.
   if (admin) {
     const state = await getAddReviewState(env, chatId);
     if (state) {
       const photo = message.photo;
+      const caption = message.caption?.trim() || "";
       if (photo && photo.length > 0 && state.step === "photo") {
-        await setAddReviewState(env, chatId, { step: "text", file_id: photo[photo.length - 1].file_id });
+        const fileId = photo[photo.length - 1].file_id;
+        if (caption) return finishAddReview(env, chatId, { file_id: fileId, text: caption });
+        await setAddReviewState(env, chatId, { step: "text", file_id: fileId });
         return sendMessage(env, chatId, "Фото сохранено. Теперь отправьте текст отзыва (или /cancel):");
       }
+      if (text && !text.startsWith("/") && state.step === "photo") {
+        return finishAddReview(env, chatId, { file_id: REVIEW_NO_PHOTO, text });
+      }
       if (text && state.step === "text" && "file_id" in state) {
-        await addReview(env, { file_id: state.file_id, text });
-        await clearAddReviewState(env, chatId);
-        return sendMessage(env, chatId, "Отзыв добавлен ✅");
+        return finishAddReview(env, chatId, { file_id: state.file_id, text });
       }
       return sendMessage(env, chatId, state.step === "photo" ? "Жду фото отзыва (или /cancel)." : "Жду текст отзыва (или /cancel).");
     }
@@ -363,15 +370,32 @@ async function loadReviews(env: Env): Promise<Review[]> {
   }
 }
 
+// Новые отзывы — первыми
 async function addReview(env: Env, review: Review): Promise<void> {
   const reviews = await loadReviews(env);
-  reviews.push(review);
+  reviews.unshift(review);
   await env.KV.put(REVIEWS_KEY, JSON.stringify(reviews));
+}
+
+async function finishAddReview(env: Env, chatId: number, review: Review): Promise<void> {
+  await addReview(env, review);
+  await clearAddReviewState(env, chatId);
+  await sendMessage(env, chatId, "Отзыв добавлен ✅ Он показывается первым.");
 }
 
 async function startAddReview(env: Env, chatId: number): Promise<void> {
   await setAddReviewState(env, chatId, { step: "photo" });
-  await sendMessage(env, chatId, "Отправьте фото отзыва (скриншот, фото с покупкой). Отмена — /cancel");
+  await sendMessage(
+    env,
+    chatId,
+    "Отправьте фото отзыва (скриншот, фото с покупкой) — или перешлите сюда комментарий-отзыв из группы с фото и текстом. Если фото нет — сразу текст. Отмена — /cancel",
+  );
+}
+
+// Фото отзыва: file_id Telegram или путь к картинке на сайте магазина
+const REVIEW_NO_PHOTO = "reviews/no-photo.png";
+function reviewPhoto(env: Env, fileId: string): string {
+  return fileId.startsWith("reviews/") ? new URL(fileId, env.MINI_APP_URL).toString() : fileId;
 }
 
 async function getAddReviewState(env: Env, chatId: number): Promise<AddReviewState | null> {
@@ -414,14 +438,15 @@ async function showReview(env: Env, chatId: number, index: number, messageId?: n
     ],
   };
 
+  const photo = reviewPhoto(env, review.file_id);
   if (messageId) {
     await callTelegram(env, "editMessageMedia", {
       chat_id: chatId,
       message_id: messageId,
-      media: { type: "photo", media: review.file_id, caption },
+      media: { type: "photo", media: photo, caption },
       reply_markup: keyboard,
     });
   } else {
-    await callTelegram(env, "sendPhoto", { chat_id: chatId, photo: review.file_id, caption, reply_markup: keyboard });
+    await callTelegram(env, "sendPhoto", { chat_id: chatId, photo, caption, reply_markup: keyboard });
   }
 }
