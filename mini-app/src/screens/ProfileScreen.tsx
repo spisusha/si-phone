@@ -3,16 +3,10 @@ import { Link } from 'react-router-dom';
 import { SELLER_LINE } from '../domain/legal';
 import { getTgUser } from '../telegram/telegramWebApp';
 import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
-import { IconPhone, IconPin, IconTelegram } from '../components/icons';
-import { callPhone, openTelegramChat } from '../telegram/telegramWebApp';
+import { IconChat, IconPhone, IconPin, IconStar, IconTelegram } from '../components/icons';
+import { callPhone, openMaxChat, openTelegramChat } from '../telegram/telegramWebApp';
+import { CONTACTS, type ShopContact } from '../domain/shop';
 import './ProfileScreen.css';
-
-// Контакты магазина
-const TG_CONTACTS = ['l_bobr_l', 'andr3i23']; // первым — главный менеджер (Артём)
-const PHONES = [
-  { tel: '+79164050444', label: '+7 916 405-04-44' },
-  { tel: '+79252010234', label: '+7 925 201-02-34' },
-];
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: 'auto', label: 'Авто' },
@@ -61,29 +55,10 @@ export default function ProfileScreen() {
         </div>
       </div>
 
-      <p className="tg-section-title">Связаться</p>
-      <div className="tg-group profile-contacts-list">
-        {TG_CONTACTS.map((c) => (
-          <button key={c} className="tg-row" onClick={() => openTelegramChat(`https://t.me/${c}`)}>
-            <IconTelegram size={20} className="tg-row__icon" />
-            <span className="tg-row__main tg-row__title">Написать в Telegram</span>
-            <span className="tg-row__value profile-contact-value">@{c}</span>
-            <svg className="tg-row__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-          </button>
-        ))}
-        {PHONES.map((p) => (
-          <a key={p.tel} className="tg-row" href={`tel:${p.tel}`} onClick={(e) => { if (callPhone(p.tel)) e.preventDefault(); }}>
-            <IconPhone size={20} className="tg-row__icon" />
-            <span className="tg-row__main tg-row__title">Позвонить</span>
-            <span className="tg-row__value profile-contact-value">{p.label}</span>
-            <svg className="tg-row__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-          </a>
-        ))}
-        <div className="tg-row">
-          <IconPin size={20} className="tg-row__icon" />
-          <span className="tg-row__main tg-row__title">Москва</span>
-        </div>
-      </div>
+      <p className="tg-section-title">Контакты</p>
+      {/* По карточке на человека; звёздочка — к кому писать в первую очередь */}
+      {CONTACTS.map((c) => <ContactCard key={c.telegram} contact={c} />)}
+      <p className="profile-city"><IconPin size={16} /> Москва</p>
 
       <p className="tg-section-title">Оформление</p>
       <div className="profile-section">
@@ -110,6 +85,43 @@ export default function ProfileScreen() {
       </div>
       <p className="profile-seller">{SELLER_LINE}</p>
       <p className="profile-version">Версия {__APP_VERSION__}</p>
+    </div>
+  );
+}
+
+function ContactCard({ contact: c }: { contact: ShopContact }) {
+  const buttons = 2 + (c.max ? 1 : 0);
+  return (
+    <div className={`contact-card${c.primary ? ' contact-card--primary' : ''}`}>
+      <div className="contact-card__who">
+        <span className="contact-card__avatar" aria-hidden="true">{c.name[0]}</span>
+        <span className="contact-card__name">
+          {c.name}
+          {c.primary && <IconStar size={16} className="contact-card__star" />}
+          {c.primary && <span className="sr-only"> — пишите в первую очередь</span>}
+        </span>
+      </div>
+      <div className="contact-card__actions" style={{ gridTemplateColumns: `repeat(${buttons}, 1fr)` }}>
+        <button className="contact-card__btn" onClick={() => openTelegramChat(`https://t.me/${c.telegram}`)}>
+          <IconTelegram size={20} />
+          Telegram
+        </button>
+        {c.max && (
+          <button className="contact-card__btn" onClick={() => openMaxChat(c.max!)}>
+            <IconChat size={20} />
+            MAX
+          </button>
+        )}
+        <a
+          className="contact-card__btn"
+          href={`tel:${c.phone.tel}`}
+          aria-label={`Позвонить ${c.name}: ${c.phone.label}`}
+          onClick={(e) => { if (callPhone(c.phone.tel)) e.preventDefault(); }}
+        >
+          <IconPhone size={20} />
+          Позвонить
+        </a>
+      </div>
     </div>
   );
 }

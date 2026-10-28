@@ -17,8 +17,9 @@ iPhone, iPad, MacBook, Apple Watch, AirPods — новые, в заводско�
 `.trim();
 
 export const CONTACTS_MESSAGE = `
-<b>Артём</b> — главный менеджер
+<b>Артём</b>
 Telegram: @l_bobr_l
+MAX: <a href="https://max.ru/u/f9LHodD0cOI5N3oL8IJOJJuK9uS7MlCBU247-9Sz14Kdywx8LMBXzYr3z20">написать</a>
 Телефон: +7 916 405-04-44
 
 <b>Андрей</b>

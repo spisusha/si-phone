@@ -220,3 +220,20 @@ export function openTelegramChat(url: string): void {
   if (supports('6.1') && wa?.openTelegramLink) wa.openTelegramLink(url);
   else window.open(url, '_blank', 'noopener,noreferrer');
 }
+
+/* ── Чат в MAX: внутри Telegram открываем через openLink — во внешнем браузере телефона,
+   откуда ссылка max.ru сама откроет приложение MAX, если оно установлено.
+   Пропускаем только https://max.ru/…, чтобы сюда нельзя было подставить чужой адрес. ── */
+
+export function openMaxChat(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return;
+  }
+  if (parsed.protocol !== 'https:' || parsed.hostname !== 'max.ru') return;
+  const wa = getWebApp();
+  if (isTelegramEnv() && wa?.openLink) wa.openLink(parsed.href);
+  else window.open(parsed.href, '_blank', 'noopener,noreferrer');
+}

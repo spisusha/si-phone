@@ -64,6 +64,14 @@ export const IconTelegram = (p: IconProps) => (
   <Svg {...p}><path d="M21 4L3 11l6.5 2.5L12 20l3-4.5 5 3.5 1-15z" /><path d="M9.5 13.5L21 4" /></Svg>
 );
 
+export const IconStar = (p: IconProps) => (
+  <Svg {...p}><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z" /></Svg>
+);
+
+export const IconChat = (p: IconProps) => (
+  <Svg {...p}><path d="M20.5 12a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1-4.3A8.5 8.5 0 1 1 20.5 12z" /></Svg>
+);
+
 export const IconPin = (p: IconProps) => (
   <Svg {...p}><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.2" /></Svg>
 );
