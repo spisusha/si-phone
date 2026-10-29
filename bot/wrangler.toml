@@ -7,7 +7,7 @@ compatibility_date = "2024-01-01"
 
 # Публичные переменные (не секреты)
 [vars]
-MINI_APP_URL = "https://si-phone.pages.dev/"
+MINI_APP_URL = "https://si-phone.ru/"
 SUPABASE_URL = "https://zudohmttvlibpugravgb.supabase.co"
 # Отзывы: группа обсуждений канала «Sí phone» и пост «Ваши отзывы❗️» в ней. Бот должен быть админом группы.
 REVIEWS_GROUP_ID = "-1002273047590"
