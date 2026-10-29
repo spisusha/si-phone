@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getWheelStatus, spinWheel, GIFT_MIN_ORDER, type WheelGift, type WheelSector } from '../api/wheelRepo';
+import { getWheelStatus, spinWheel, DEFAULT_SECTORS, GIFT_MIN_ORDER, type WheelGift, type WheelSector } from '../api/wheelRepo';
 import { hasNativeBackButton, haptic } from '../telegram/telegramWebApp';
 import './WheelScreen.css';
 
@@ -69,7 +69,7 @@ function Wheel({ sectors, angle, spinning }: { sectors: WheelSector[]; angle: nu
 export default function WheelScreen() {
   const navigate = useNavigate();
   const nativeBack = hasNativeBackButton();
-  const [sectors, setSectors] = useState<WheelSector[]>([]);
+  const [sectors, setSectors] = useState<WheelSector[]>(DEFAULT_SECTORS);
   const [gift, setGift] = useState<WheelGift | null>(null);
   const [canSpin, setCanSpin] = useState(false);
   const [loading, setLoading] = useState(true);

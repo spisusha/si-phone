@@ -10,6 +10,15 @@ export const GIFT_MIN_ORDER = 5000; // как в create-order
 export const GIFT_DISCOUNT = 1000;
 
 export interface WheelSector { key: string; short: string }
+
+/** Секторы для картинки, пока сервер не ответил или магазин открыт не в Telegram (как в базе) */
+export const DEFAULT_SECTORS: WheelSector[] = [
+  { key: 'glass', short: 'Стекло' },
+  { key: 'delivery', short: 'Доставка 0 ₽' },
+  { key: 'case', short: 'Чехол' },
+  { key: 'discount', short: '−1 000 ₽' },
+  { key: 'again', short: 'Ещё раз' },
+];
 export interface WheelGift {
   prize: string;
   title: string;
