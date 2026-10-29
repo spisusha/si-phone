@@ -19,6 +19,11 @@ const LIMIT_DAY = 20;
 const ITEM_ID_RE = /^[1-9]\d{0,6}$/; // ID товара из таблицы каталога: 1, 2, 3…
 const PHONE_RE = /^[+\d\s()-]{5,32}$/;
 const STRAP_RE = /^(|S|M|L|S\/M|M\/L)$/; // пусто — товар без выбора размера
+// Подарок с колеса (функция wheel) добавляется сам к заказу от этой суммы; скидка — у приза 'discount'
+const GIFT_MIN_ORDER = 5000;
+const GIFT_DISCOUNT = 1000;
+
+interface Gift { id: number; prize: string; title: string; code: string; discount: number }
 
 interface RequestBody {
   initData?: string;
@@ -53,7 +58,7 @@ function formatPrice(n: number): string {
   return n.toLocaleString('ru-RU');
 }
 
-function buildMessage(orderId: string, user: TgUser, lines: OrderLine[], total: number, c: Contacts): string {
+function buildMessage(orderId: string, user: TgUser, lines: OrderLine[], total: number, c: Contacts, gift: Gift | null): string {
   const out: string[] = [];
   out.push(`🧾 <b>Заказ:</b> <code>${escapeHtml(orderId.slice(0, 8).toUpperCase())}</code>`);
   const name = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Без имени';
@@ -67,7 +72,11 @@ function buildMessage(orderId: string, user: TgUser, lines: OrderLine[], total: 
     out.push(`  • ${escapeHtml(l.title)}${opts} ×${l.qty} — ${formatPrice(l.price * l.qty)} ₽`);
   }
   out.push('');
-  out.push(`💰 <b>Итого:</b> ${formatPrice(total)} ₽ (цены из базы на момент заказа)`);
+  if (gift) {
+    out.push(`🎁 <b>Подарок с колеса:</b> ${escapeHtml(gift.title)} — код <code>${escapeHtml(gift.code)}</code>`);
+    if (gift.discount) out.push(`➖ <b>Скидка по подарку:</b> ${formatPrice(gift.discount)} ₽`);
+  }
+  out.push(`💰 <b>Итого:</b> ${formatPrice(total)} ₽ (цены из базы на момент заказа${gift?.discount ? ', со скидкой' : ''})`);
   out.push(`🚚 <b>Получение:</b> ${c.deliveryMethod === 'pickup' ? 'Самовывоз' : 'Доставка'}`);
   if (c.deliveryMethod === 'delivery') out.push(`📍 <b>Адрес:</b> ${escapeHtml(c.address)}`);
   if (c.phone) out.push(`📱 <b>Телефон:</b> ${escapeHtml(c.phone)}`);
@@ -164,14 +173,33 @@ Deno.serve(withCors(async (req) => {
         qty: w.qty,
       });
     }
-    const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
+    const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
+    const userKey = await fingerprint('order-user', String(user.id));
+
+    /* ── 4б. подарок с колеса: действующий, не использованный, заказ от GIFT_MIN_ORDER ── */
+    let gift: Gift | null = null;
+    if (subtotal >= GIFT_MIN_ORDER) {
+      const { data: g } = await sb.from('wheel_spins')
+        .select('id, prize_key, code, wheel_prizes(title)')
+        .eq('user_key', userKey).neq('prize_key', 'again').is('used_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (g?.code) {
+        const prizeRow = (g as unknown as { wheel_prizes?: { title?: string } | null }).wheel_prizes;
+        const title = String(prizeRow?.title ?? g.prize_key);
+        gift = { id: g.id, prize: g.prize_key, title, code: g.code, discount: g.prize_key === 'discount' ? GIFT_DISCOUNT : 0 };
+      }
+    }
+    const total = subtotal - (gift?.discount ?? 0);
 
     /* ── 5. сохранить (с лимитом) и отправить админам ── */
     const orderId = crypto.randomUUID();
     const contacts: Contacts = { deliveryMethod, paymentMethod, address, phone };
     // Только состав заказа — без имени, ника, телефона и адреса
-    const payload = { items: lines, total, deliveryMethod, paymentMethod };
-    const userKey = await fingerprint('order-user', String(user.id));
+    const payload = {
+      items: lines, total, deliveryMethod, paymentMethod,
+      ...(gift ? { subtotal, gift: { prize: gift.prize, code: gift.code, discount: gift.discount } } : {}),
+    };
 
     // Лимит частоты и запись заказа — одной операцией в базе с блокировкой по пользователю:
     // пачка одновременных запросов не обойдёт лимит. Не смогли проверить — заказ не принимаем.
@@ -187,8 +215,15 @@ Deno.serve(withCors(async (req) => {
       return json({ ok: false, code: 'rate_limited', error: 'Слишком много заказов подряд. Напишите менеджеру или попробуйте позже' }, 429);
     }
 
+    // Подарок отмечаем использованным только у принятого заказа (одновременный второй заказ его уже не получит)
+    if (gift) {
+      const { data: took } = await sb.from('wheel_spins').update({ used_at: new Date().toISOString(), order_id: orderId })
+        .eq('id', gift.id).is('used_at', null).select('id');
+      if (!took?.length) console.error('create-order: gift already used', gift.code);
+    }
+
     const chatIds = (Deno.env.get('TELEGRAM_ADMIN_CHAT_IDS') || '').split(',').map((s) => s.trim()).filter(Boolean);
-    const text = buildMessage(orderId, user, lines, total, contacts);
+    const text = buildMessage(orderId, user, lines, total, contacts, gift);
     let tgSent = 0;
     for (const chatId of chatIds) {
       try {
@@ -216,9 +251,10 @@ Deno.serve(withCors(async (req) => {
     if (tgSent === 0) {
       console.error('create-order: not delivered to Telegram', orderId);
       await sb.from('orders').delete().eq('id', orderId);
+      if (gift) await sb.from('wheel_spins').update({ used_at: null, order_id: null }).eq('order_id', orderId);
       return json({ ok: false, error: 'Не получилось передать заказ менеджеру. Попробуйте ещё раз или напишите менеджеру' }, 502);
     }
-    return json({ ok: true, orderId, total, items: lines });
+    return json({ ok: true, orderId, total, items: lines, ...(gift ? { gift: { title: gift.title, code: gift.code, discount: gift.discount } } : {}) });
   } catch (err) {
     console.error('create-order error:', err);
     return json({ ok: false, error: 'Не удалось оформить заказ. Попробуйте ещё раз' }, 500);

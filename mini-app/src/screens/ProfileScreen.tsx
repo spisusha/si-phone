@@ -47,6 +47,22 @@ export default function ProfileScreen() {
       </div>
 
       <p className="tg-section-title">О магазине</p>
+      {/* Колесо подарков (Роман, 29.10.2026) — вход отсюда, как на макете */}
+      <Link to="/wheel" className="profile-wheel">
+        <svg className="profile-wheel__icon" viewBox="-12 -12 24 24" aria-hidden="true">
+          <circle r="11" fill="#12300d" />
+          <path d="M0 0 L0 -10 A10 10 0 0 1 10 0 Z" fill="#7ED957" />
+          <path d="M0 0 L0 10 A10 10 0 0 1 -10 0 Z" fill="#7ED957" />
+          <path d="M0 0 L10 0 A10 10 0 0 1 0 10 Z" fill="#ffffff" />
+          <path d="M0 0 L-10 0 A10 10 0 0 1 0 -10 Z" fill="#ffffff" />
+          <circle r="3" fill="#12300d" />
+        </svg>
+        <span className="profile-wheel__text">
+          <strong>Колесо подарков</strong>
+          <span>Крутите — стекло, чехол, доставка или скидка к заказу</span>
+        </span>
+        <svg className="profile-wheel__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><polyline points="9 18 15 12 9 6" /></svg>
+      </Link>
       <div className="profile-section">
         <div className="profile-about">
           <p className="profile-about__lead">Оригинальные гаджеты по выгодным ценам 🤙</p>

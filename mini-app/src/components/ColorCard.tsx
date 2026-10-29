@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { ColorCardData } from '../domain/catalogTree';
+import { shortGroup, type ColorCardData } from '../domain/catalogTree';
 import StockBadge from './StockBadge';
 import './ProductCard.css';
 
@@ -11,7 +11,7 @@ export default function ColorCard({ card }: { card: ColorCardData }) {
     : 'Цена по запросу';
 
   return (
-    <div className="product-card" onClick={() => navigate(card.href)}>
+    <div className="product-card" data-group={shortGroup(card.family)} onClick={() => navigate(card.href)}>
       <div className="product-card__img-wrap">
         <img src={card.image || '/placeholder.svg'} alt={`${card.title} ${card.subtitle}`} loading="lazy" />
       </div>

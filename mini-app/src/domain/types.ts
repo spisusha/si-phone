@@ -66,6 +66,8 @@ export type PaymentMethod = 'cash' | 'online';
 export interface OrderPayload {
   items: CartItem[];
   totals: number;
+  /** Подарок с колеса, который сервер добавил к заказу */
+  gift?: { title: string; code: string; discount: number };
   deliveryMethod: DeliveryMethod;
   address?: string;
   phone?: string;

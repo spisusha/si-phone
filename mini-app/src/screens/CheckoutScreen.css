@@ -73,3 +73,17 @@
   font-size: 15px;
   line-height: 1.4;
 }
+
+/* Подарок с колеса в оформлении */
+.checkout-gift {
+  margin-top: 16px;
+}
+
+.checkout-gift .tg-row {
+  gap: 12px;
+}
+
+.checkout-gift__icon {
+  font-size: 22px;
+  line-height: 1;
+}

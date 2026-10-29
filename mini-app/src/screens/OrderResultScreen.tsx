@@ -111,6 +111,17 @@ export default function OrderResultScreen() {
             </div>
           );
         })}
+        {payload.gift && (
+          <div className="tg-row">
+            <span className="tg-row__main">
+              <span className="tg-row__title">🎁 {payload.gift.title}</span>
+              <span className="tg-row__sub">Подарок с колеса, код {payload.gift.code}</span>
+            </span>
+            {payload.gift.discount > 0 && (
+              <span className="tg-row__value">−{payload.gift.discount.toLocaleString('ru-RU')} ₽</span>
+            )}
+          </div>
+        )}
         <div className="tg-row">
           <span className="tg-row__main tg-row__title result-total-label">Итого</span>
           <span className="tg-row__value result-total">{payload.totals.toLocaleString('ru-RU')} ₽</span>

@@ -12,6 +12,7 @@ import CheckoutScreen from '../screens/CheckoutScreen';
 import OrderResultScreen from '../screens/OrderResultScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import LegalScreen from '../screens/LegalScreen';
+import WheelScreen from '../screens/WheelScreen';
 import ReviewsScreen from '../screens/ReviewsScreen';
 import Loader from '../components/Loader';
 
@@ -26,7 +27,7 @@ function parentPath(pathname: string): string {
   const parts = pathname.split('/').filter(Boolean);
   if (parts[0] === 'catalog') return '/' + parts.slice(0, -1).join('/');
   if (parts[0] === 'checkout') return '/cart';
-  if (parts[0] === 'privacy' || parts[0] === 'consent' || parts[0] === 'reviews') return '/profile';
+  if (['privacy', 'consent', 'reviews', 'wheel', 'wheel-rules'].includes(parts[0])) return '/profile';
   return '/';
 }
 
@@ -74,6 +75,8 @@ function Layout() {
           <Route path="/profile" element={<ProfileScreen />} />
           <Route path="/privacy" element={<LegalScreen doc="privacy" />} />
           <Route path="/consent" element={<LegalScreen doc="consent" />} />
+          <Route path="/wheel" element={<WheelScreen />} />
+          <Route path="/wheel-rules" element={<LegalScreen doc="wheel" />} />
           <Route path="/reviews" element={<ReviewsScreen />} />
           <Route path="/admin/*" element={<AdminScreen />} />
         </Routes>

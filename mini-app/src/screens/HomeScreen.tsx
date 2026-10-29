@@ -14,11 +14,8 @@ import './HomeScreen.css';
 import { CatalogFailed } from '../components/EmptyState';
 import FastScroll from '../components/FastScroll';
 
-// Подсказка у язычка прокрутки: «iPhone 17 Pro Cosmic Orange»
-const cardLabel = (el: Element) =>
-  [el.querySelector('.product-card__title')?.textContent, el.querySelector('.product-card__desc')?.textContent]
-    .filter(Boolean)
-    .join(' ');
+// Подсказка у язычка прокрутки — короткая группа: «iPhone 17», «MacBook M4» (Роман, 29.10.2026)
+const cardLabel = (el: Element) => el.getAttribute('data-group') ?? '';
 
 function catFromParam(val: string | null): Category | null {
   if (!val) return null;

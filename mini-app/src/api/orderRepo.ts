@@ -23,7 +23,7 @@ export interface ServerOrderLine {
 }
 
 export type CreateOrderResult =
-  | { ok: true; orderId: string; total: number; items: ServerOrderLine[] }
+  | { ok: true; orderId: string; total: number; items: ServerOrderLine[]; gift?: { title: string; code: string; discount: number } }
   | { ok: false; error: string };
 
 const NOT_IN_TELEGRAM = 'Откройте магазин через Telegram, чтобы оформить заказ';

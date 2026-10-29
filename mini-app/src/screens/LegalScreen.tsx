@@ -1,15 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { hasNativeBackButton } from '../telegram/telegramWebApp';
-import { CONSENT, PRIVACY_POLICY, type LegalDoc } from '../domain/legal';
+import { CONSENT, PRIVACY_POLICY, WHEEL_RULES, type LegalDoc } from '../domain/legal';
 import './LegalScreen.css';
 
 // Политика обработки персональных данных (/privacy) и согласие (/consent) — 152-ФЗ.
 // Обычные страницы магазина: открываются из оформления, профиля и по прямой ссылке.
 
-export default function LegalScreen({ doc }: { doc: 'privacy' | 'consent' }) {
+export default function LegalScreen({ doc }: { doc: 'privacy' | 'consent' | 'wheel' }) {
   const navigate = useNavigate();
   const nativeBack = hasNativeBackButton();
-  const d: LegalDoc = doc === 'privacy' ? PRIVACY_POLICY : CONSENT;
+  const d: LegalDoc = doc === 'privacy' ? PRIVACY_POLICY : doc === 'wheel' ? WHEEL_RULES : CONSENT;
 
   return (
     <div className="page legal">
@@ -31,7 +31,7 @@ export default function LegalScreen({ doc }: { doc: 'privacy' | 'consent' }) {
       <p className="legal__other">
         {doc === 'privacy'
           ? <Link to="/consent" replace>Согласие на обработку персональных данных</Link>
-          : <Link to="/privacy" replace>Политика обработки персональных данных</Link>}
+          : <Link to="/privacy" replace={doc === 'consent'}>Политика обработки персональных данных</Link>}
       </p>
     </div>
   );

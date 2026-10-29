@@ -338,3 +338,49 @@
   flex-shrink: 0;
   color: var(--color-muted);
 }
+
+/* Вход в «Колесо подарков» */
+.profile-wheel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #7ED957, #5cc23a);
+  color: #102a07;
+  text-decoration: none;
+  box-shadow: var(--shadow-card);
+}
+
+.profile-wheel:active {
+  transform: scale(0.99);
+}
+
+.profile-wheel__icon {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.profile-wheel__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.profile-wheel__text strong {
+  font-size: var(--fs-body);
+}
+
+.profile-wheel__text span {
+  font-size: var(--fs-cap);
+  opacity: 0.85;
+}
+
+.profile-wheel__chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+}

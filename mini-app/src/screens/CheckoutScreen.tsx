@@ -9,6 +9,7 @@ import { getTgUser, haptic, setClosingConfirmation } from '../telegram/telegramW
 import { useTelegramMainButton } from '../telegram/hooks';
 import { IconClock } from '../components/icons';
 import { WORK_HOURS, nextWorkStart } from '../domain/shop';
+import { getWheelStatus, GIFT_DISCOUNT, GIFT_MIN_ORDER, type WheelGift } from '../api/wheelRepo';
 import type { DeliveryMethod, PaymentMethod, OrderPayload } from '../domain/types';
 import './CheckoutScreen.css';
 
@@ -41,6 +42,21 @@ export default function CheckoutScreen() {
   }, [delivery, payment, address, phone, consent]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Подарок с колеса: сервер сам добавит его к заказу от GIFT_MIN_ORDER — здесь только показываем
+  const [gift, setGift] = useState<WheelGift | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getWheelStatus().then((r) => {
+      if (!alive || !r.ok || !r.gift) return;
+      const g = r.gift;
+      if (!g.usedAt && g.expiresAt && new Date(g.expiresAt).getTime() > Date.now()) setGift(g);
+    });
+    return () => { alive = false; };
+  }, []);
+  const subtotal = total();
+  const giftApplies = !!gift && subtotal >= GIFT_MIN_ORDER;
+  const payTotal = subtotal - (giftApplies && gift?.prize === 'discount' ? GIFT_DISCOUNT : 0);
 
   const handleSubmit = async () => {
     if (submitting) return; // защита от двойного нажатия
@@ -78,6 +94,7 @@ export default function CheckoutScreen() {
     const payload: OrderPayload = {
       items: items.map((i) => ({ ...i, priceSnapshot: serverPrice.get(i.variantId) ?? i.priceSnapshot })),
       totals: result.total >= 0 ? result.total : total(),
+      ...(result.gift ? { gift: result.gift } : {}),
       deliveryMethod: delivery,
       address: delivery === 'delivery' ? address.trim() : undefined,
       phone: phone.trim() || undefined,
@@ -101,7 +118,7 @@ export default function CheckoutScreen() {
 
   // Итоговое действие — большая кнопка Telegram с суммой и крутилкой на время отправки.
   const nativeMain = useTelegramMainButton({
-    text: `Подтвердить заказ  ${total().toLocaleString('ru-RU')} ₽`,
+    text: `Подтвердить заказ  ${payTotal.toLocaleString('ru-RU')} ₽`,
     onClick: handleSubmit,
     visible: items.length > 0,
     progress: submitting,
@@ -197,10 +214,32 @@ export default function CheckoutScreen() {
       </div>
       <p className="tg-section-footer">Необязательно — менеджер и так напишет вам в Telegram. Контакты и адрес получит только менеджер, мы их не храним.</p>
 
+      {gift && (
+        <div className="tg-group checkout-gift">
+          <div className="tg-row">
+            <span className="checkout-gift__icon" aria-hidden="true">🎁</span>
+            <span className="tg-row__main">
+              <span className="tg-row__title">Подарок с колеса: {gift.title}</span>
+              <span className="tg-row__sub">
+                {giftApplies
+                  ? 'Добавится к этому заказу'
+                  : `Добавится к заказу от ${GIFT_MIN_ORDER.toLocaleString('ru-RU')} ₽`}
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="tg-group checkout-summary">
+        {payTotal !== subtotal && (
+          <div className="tg-row">
+            <span className="tg-row__main tg-row__title">Скидка по подарку</span>
+            <span className="tg-row__value">−{GIFT_DISCOUNT.toLocaleString('ru-RU')} ₽</span>
+          </div>
+        )}
         <div className="tg-row">
           <span className="tg-row__main tg-row__title">Итого за {plural(count, ['товар', 'товара', 'товаров'])}</span>
-          <span className="tg-row__value checkout-summary__total">{total().toLocaleString('ru-RU')} ₽</span>
+          <span className="tg-row__value checkout-summary__total">{payTotal.toLocaleString('ru-RU')} ₽</span>
         </div>
       </div>
       <p className="tg-section-footer">
@@ -243,7 +282,7 @@ export default function CheckoutScreen() {
             {submitting ? 'Оформляем…' : (
               <>
                 <span>Подтвердить заказ</span>
-                <span>{total().toLocaleString('ru-RU')} ₽</span>
+                <span>{payTotal.toLocaleString('ru-RU')} ₽</span>
               </>
             )}
           </button>
