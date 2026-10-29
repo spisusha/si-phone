@@ -39,19 +39,6 @@ export function modelPlace(f: ProductFamily): ModelPlace {
   }
 }
 
-/** Короткая группа для подсказки у язычка прокрутки (Роман, 29.10.2026): «iPhone 17», «iPhone Air»,
- *  «MacBook M4», «iPad Pro», «Watch Ultra 3», «AirPods» — без цветов и счётчиков. */
-export function shortGroup(f: ProductFamily): string {
-  const { gen, line } = modelPlace(f);
-  switch (f.category) {
-    case 'iPhone': return gen;
-    case 'MacBook': return gen === 'Neo' ? 'MacBook Neo' : `MacBook ${gen}`;
-    case 'iPad': return line;
-    case 'Watch': return `Watch ${line}`;
-    case 'AirPods': return line;
-  }
-}
-
 /** Подпись плашки первого уровня: «iPhone 17», «MacBook M5», «Apple Watch Ultra» */
 export function genTitle(cat: Category, gen: string): string {
   switch (cat) {

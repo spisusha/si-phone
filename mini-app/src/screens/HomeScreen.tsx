@@ -12,10 +12,6 @@ import { categoryName } from '../domain/shop';
 import { buildColorCards } from '../domain/catalogTree';
 import './HomeScreen.css';
 import { CatalogFailed } from '../components/EmptyState';
-import FastScroll from '../components/FastScroll';
-
-// Подсказка у язычка прокрутки — короткая группа: «iPhone 17», «MacBook M4» (Роман, 29.10.2026)
-const cardLabel = (el: Element) => el.getAttribute('data-group') ?? '';
 
 function catFromParam(val: string | null): Category | null {
   if (!val) return null;
@@ -78,7 +74,6 @@ export default function HomeScreen() {
 
       {/* В конце витрины — для тех, кто долистал и не нашёл; при пустом фильтре — своя подсказка выше */}
       {cards.length > 0 && <ManagerHint />}
-      <FastScroll itemSelector=".product-grid .product-card" labelOf={cardLabel} />
     </div>
   );
 }
