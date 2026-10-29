@@ -76,7 +76,7 @@ function itemOptions(it: ItemRow, category: Category, title: string): VariantOpt
 let cache: Promise<{ families: ProductFamily[]; variants: Variant[] }> | null = null;
 
 // На Cloudflare каталог отдаёт /api/catalog (functions/api/catalog.ts) — копия, обновляемая раз в минуту,
-// чтобы при наплыве покупателей база не тормозила. Нет такого адреса (локально, Vercel) или он
+// чтобы при наплыве покупателей база не тормозила. Нет такого адреса (локально, npm run dev) или он
 // не ответил — грузим из Supabase напрямую, как раньше.
 async function fetchCached(): Promise<{ models: ModelRow[]; items: ItemRow[] } | null> {
   try {

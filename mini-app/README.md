@@ -24,7 +24,8 @@ src/
   store/        Zustand: каталог, корзина
   telegram/     обёртка WebApp API: тема, цвета шапки, вибрация, кнопки, звонок
   styles/       токены темы, списки в стиле Telegram
-public/         call.html (звонок из Telegram), favicon, заглушка фото
+public/         call.html (звонок из Telegram), favicon, заглушка фото, _headers (CSP), _routes.json
+functions/      Cloudflare Pages: _middleware (pages.dev и www → si-phone.ru), api/catalog (кэш каталога), api/reviews (отзывы от бота)
 supabase/
   migrations/   схема базы, защита (RLS), расчёт цен, курс ЦБ по расписанию
   functions/    create-order, admin-login, admin-catalog (Deno); _shared — общий код
@@ -39,5 +40,6 @@ brand/splash/   экран загрузки для BotFather
 
 ## Выкладка
 
-- **Сайт** — Cloudflare Pages, проект `si-phone` (https://si-phone.pages.dev): `npm run build`, затем `npx wrangler pages deploy dist --project-name si-phone --branch main` (из папки `mini-app`, wrangler — из `bot/`). Вместе с сайтом выкладывается `functions/api/catalog.ts` — каталог из кэша (обновление раз в минуту; секрет проекта `SUPABASE_ANON_KEY`). Заголовки безопасности — `public/_headers`.
-- **Функции Supabase** — `npx supabase functions deploy <имя> --no-verify-jwt` (подпись проверяет сама функция). Разрешённые адреса сайта — секрет `ALLOWED_ORIGINS`.
+- **Сайт** — **https://si-phone.ru** (Cloudflare Pages, проект `si-phone`; домен — зона в Cloudflare, регистратор Бегет, владелец Артём). Выкладка: `npm run build`, затем `../bot/node_modules/.bin/wrangler pages deploy dist --project-name si-phone --branch main` (из папки `mini-app`). Технический адрес `si-phone.pages.dev` и `www.si-phone.ru` навсегда переадресуются на si-phone.ru (`functions/_middleware.ts`). Вместе с сайтом выкладываются функции: `api/catalog` — каталог из кэша (раз в минуту; секрет проекта `SUPABASE_ANON_KEY`), `api/reviews` — отзывы от бота с кэшем. Заголовки безопасности — `public/_headers`.
+- **Локально с отзывами**: в `.claude/launch.json` есть `bot-local` (бот на :8787) и `mini-app-local-reviews` (магазин на :5174 берёт отзывы у него, `REVIEWS_API`). Обычный `npm run dev` берёт отзывы у выложенного бота.
+- **Функции Supabase** — `npx supabase functions deploy <имя> --no-verify-jwt` (подпись проверяет сама функция). Разрешённые адреса сайта — секрет `ALLOWED_ORIGINS` (сейчас только `https://si-phone.ru`).
