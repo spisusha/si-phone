@@ -30,15 +30,22 @@
   cursor: grab;
 }
 
-/* Зона касания шире самого язычка: удобнее попасть пальцем */
+/* Зона касания чуть шире самого язычка (но не заходит на карточки — меньше случайных касаний) */
 .fast-scroll__thumb::before {
   content: '';
   position: absolute;
-  inset: -6px -3px -6px -16px;
+  inset: -6px -3px -6px -6px;
 }
 
-.fast-scroll.is-shown .fast-scroll__thumb {
+/* Пока страница едет — полупрозрачный и касания пропускает странице; встала — можно хватать */
+.fast-scroll__thumb {
+  opacity: 0.45;
+  transition: opacity 0.15s;
+}
+
+.fast-scroll.is-shown.is-armed .fast-scroll__thumb {
   pointer-events: auto;
+  opacity: 1;
 }
 
 .fast-scroll__thumb.is-dragging {
