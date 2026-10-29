@@ -12,6 +12,9 @@ SUPABASE_URL = "https://zudohmttvlibpugravgb.supabase.co"
 # Отзывы: группа обсуждений канала «Sí phone» и пост «Ваши отзывы❗️» в ней. Бот должен быть админом группы.
 REVIEWS_GROUP_ID = "-1002273047590"
 REVIEWS_POST_ID = "9"
+# Тот же пост в открытом канале @si_ph0ne — ссылки «Посмотреть в Telegram» в магазине
+REVIEWS_CHANNEL = "si_ph0ne"
+REVIEWS_CHANNEL_POST = "32"
 
 # Раз в день (07:00 UTC = 10:00 МСК) — лёгкий запрос к базе магазина, чтобы бесплатный Supabase не засыпал
 [triggers]

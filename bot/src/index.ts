@@ -19,8 +19,9 @@ import {
 // Типы для Telegram API
 interface TelegramMessage {
   message_id: number;
+  date?: number;
   chat: { id: number; type: string };
-  from?: { id: number; is_bot?: boolean };
+  from?: { id: number; is_bot?: boolean; first_name?: string; last_name?: string };
   sender_chat?: { id: number }; // пишет канал или группа, а не человек
   is_automatic_forward?: boolean; // пост канала, автоматически попавший в группу обсуждений
   message_thread_id?: number;
@@ -44,7 +45,9 @@ interface TelegramUpdate {
 // «Переслано от <имя>» — понятно, что писал покупатель, а не магазин. Удалит автор — пропадёт и тут.
 // Отзыв не из группы (добавлен админом вручную) — копия: фото (file_id или путь на сайте) + текст;
 // у отзыва без фото — фирменная карточка REVIEW_NO_PHOTO.
-type GroupReview = { group_ids: number[] };
+// Для магазина у отзыва из группы есть и копия: имя автора, дата (unix), текст и file_id фото —
+// мини-приложение не умеет пересылать сообщения и показывает отзыв своей карточкой.
+type GroupReview = { group_ids: number[]; name?: string; date?: number; text?: string; photos?: string[] };
 type CopyReview = { file_id: string; text: string };
 type Review = GroupReview | CopyReview;
 
@@ -62,6 +65,8 @@ interface Env {
   REVIEWS_GROUP_ID?: string; // группа обсуждений канала, где под постом оставляют отзывы
   REVIEWS_POST_ID?: string; // номер поста «Ваши отзывы» в этой группе
   REVIEW_CHAT_IDS?: string; // кому приходят новые отзывы на одобрение (секрет; не задан — админам)
+  REVIEWS_CHANNEL?: string; // открытый канал (без @) и номер поста «Ваши отзывы» в нём —
+  REVIEWS_CHANNEL_POST?: string; // для ссылок «Посмотреть в Telegram» в магазине
 }
 
 // Бесплатный Supabase засыпает, если неделю к нему никто не обращается. Раз в день бот
@@ -110,8 +115,12 @@ const allQuestionsButton = { text: "❓ Все вопросы", callback_data: "
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    // GET — проверка работоспособности (можно открыть URL в браузере)
+    // GET: отзывы для магазина (/reviews, /reviews/photo/<id>/<n>), остальное — проверка работоспособности
     if (request.method === "GET") {
+      const path = new URL(request.url).pathname;
+      if (path === "/reviews") return reviewsJson(env);
+      const photo = path.match(/^\/reviews\/photo\/(\d{1,9})\/(\d)$/);
+      if (photo) return reviewPhotoFile(env, Number(photo[1]), Number(photo[2]));
       return new Response("Si Phone Bot is running", { status: 200, headers: { "Content-Type": "text/plain" } });
     }
 
@@ -511,6 +520,7 @@ async function showReview(env: Env, chatId: number, index: number): Promise<void
 
 /* ── Новые отзывы из группы — на одобрение ── */
 
+type PendingReview = { album: string | null; name: string; date: number; text: string; photo: string | null };
 const PENDING_KEY = (groupMsgId: number) => `rvp:${groupMsgId}`;
 const ALBUM_KEY = (album: string, groupMsgId?: number) => `rvmg:${album}:${groupMsgId ?? ""}`;
 const MONTH = 30 * 24 * 60 * 60;
@@ -525,9 +535,21 @@ async function handleGroupMessage(env: Env, m: TelegramMessage): Promise<void> {
   // Не покупатель: бот, канал, сам пост или ответ магазина в комментариях
   if (!m.from || m.from.is_bot || m.sender_chat || m.is_automatic_forward || isModerator(env, m.from.id)) return;
 
-  if (m.media_group_id) await env.KV.put(ALBUM_KEY(m.media_group_id, m.message_id), "1", { expirationTtl: MONTH });
-  if (!(m.text || m.caption || "").trim()) return; // фото без подписи — часть альбома, само по себе не отзыв
-  await env.KV.put(PENDING_KEY(m.message_id), JSON.stringify({ album: m.media_group_id ?? null }), { expirationTtl: MONTH });
+  const photo = m.photo?.length ? m.photo[m.photo.length - 1].file_id : null;
+  if (m.media_group_id) {
+    await env.KV.put(ALBUM_KEY(m.media_group_id, m.message_id), "1", { expirationTtl: MONTH, metadata: { photo } });
+  }
+  const text = (m.text || m.caption || "").trim();
+  if (!text) return; // фото без подписи — часть альбома, само по себе не отзыв
+  // Копия для магазина — запоминаем сразу: потом бот этого сообщения уже не увидит
+  const pending: PendingReview = {
+    album: m.media_group_id ?? null,
+    name: [m.from.first_name, m.from.last_name].filter(Boolean).join(" ").slice(0, 64),
+    date: m.date ?? Math.floor(Date.now() / 1000),
+    text: text.slice(0, 2000),
+    photo,
+  };
+  await env.KV.put(PENDING_KEY(m.message_id), JSON.stringify(pending), { expirationTtl: MONTH });
 
   const keyboard: Keyboard = {
     inline_keyboard: [[
@@ -548,17 +570,68 @@ async function moderateReview(env: Env, chatId: number, messageId: number, group
   }
   if (!approve) return editMessage(env, chatId, messageId, "Пропущен — в отзывы бота не попал.");
 
-  // Альбом — все его фото одним отзывом
-  const ids = new Set([groupMsgId]);
-  let album: string | null = null;
+  let pending: Partial<PendingReview> = {};
   try {
-    album = (JSON.parse((await env.KV.get(PENDING_KEY(groupMsgId))) ?? "{}") as { album?: string | null }).album ?? null;
-  } catch { /* нет записи — одно сообщение */ }
-  if (album) {
-    const list = await env.KV.list({ prefix: ALBUM_KEY(album) });
-    for (const k of list.keys) ids.add(Number(k.name.split(":").pop()));
+    pending = JSON.parse((await env.KV.get(PENDING_KEY(groupMsgId))) ?? "{}") as Partial<PendingReview>;
+  } catch { /* нет записи (старше месяца) — в боте покажется, в магазине без копии не будет */ }
+
+  // Альбом — все его фото одним отзывом, по порядку сообщений
+  const parts = new Map<number, string | null>([[groupMsgId, pending.photo ?? null]]);
+  if (pending.album) {
+    const list = await env.KV.list<{ photo?: string | null }>({ prefix: ALBUM_KEY(pending.album) });
+    for (const k of list.keys) parts.set(Number(k.name.split(":").pop()), k.metadata?.photo ?? null);
   }
-  reviews.unshift({ group_ids: [...ids].filter((n) => n > 0).sort((a, b) => a - b) });
+  const ids = [...parts.keys()].filter((n) => n > 0).sort((a, b) => a - b);
+  const review: GroupReview = { group_ids: ids };
+  if (pending.text) {
+    Object.assign(review, {
+      name: pending.name,
+      date: pending.date,
+      text: pending.text,
+      photos: ids.map((id) => parts.get(id)).filter((p): p is string => !!p),
+    });
+  }
+  reviews.unshift(review);
   await env.KV.put(REVIEWS_KEY, JSON.stringify(reviews));
   await editMessage(env, chatId, messageId, "✅ Добавлен в отзывы — показывается первым.");
+}
+
+/* ── Отзывы для магазина ── */
+// Мини-приложение берёт их через свой /api/reviews (Cloudflare Pages), а тот — отсюда.
+// Только отзывы из группы, у которых есть копия: имя, дата, текст, сколько фото и ссылка на комментарий.
+
+async function reviewsJson(env: Env): Promise<Response> {
+  const reviews = await loadReviews(env);
+  const base = env.REVIEWS_CHANNEL && env.REVIEWS_CHANNEL_POST
+    ? `https://t.me/${env.REVIEWS_CHANNEL}/${env.REVIEWS_CHANNEL_POST}`
+    : null;
+  const list = reviews
+    .filter((r): r is GroupReview => "group_ids" in r && !!r.text)
+    .map((r) => ({
+      id: r.group_ids[0],
+      name: r.name || "Покупатель",
+      date: r.date ?? null,
+      text: r.text,
+      photos: r.photos?.length ?? 0,
+      link: base ? `${base}?comment=${r.group_ids[0]}` : null,
+    }));
+  return new Response(JSON.stringify({ all: base, reviews: list }), {
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=60" },
+  });
+}
+
+// Фото отзыва — из Telegram по file_id (токен бота остаётся на сервере). Отдаём только фото
+// одобренных отзывов: произвольный file_id сюда не подставить.
+async function reviewPhotoFile(env: Env, id: number, n: number): Promise<Response> {
+  const reviews = await loadReviews(env);
+  const review = reviews.find((r): r is GroupReview => "group_ids" in r && r.group_ids[0] === id);
+  const fileId = review?.photos?.[n];
+  if (!fileId) return new Response("Not found", { status: 404 });
+  const file = await telegramResult<{ file_path?: string }>(env, "getFile", { file_id: fileId });
+  if (!file?.file_path) return new Response("Not found", { status: 404 });
+  const res = await fetch(`https://api.telegram.org/file/bot${env.TELEGRAM_BOT_TOKEN}/${file.file_path}`);
+  if (!res.ok) return new Response("Upstream error", { status: 502 });
+  return new Response(res.body, {
+    headers: { "Content-Type": "image/jpeg", "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff" },
+  });
 }

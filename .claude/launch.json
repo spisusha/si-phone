@@ -15,6 +15,19 @@
         "--strictPort"
       ],
       "port": 5173
+    },
+    {
+      "name": "bot-local",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "bot", "exec", "--", "wrangler", "dev", "--port", "8787", "--cwd", "bot"],
+      "port": 8787
+    },
+    {
+      "name": "mini-app-local-reviews",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "mini-app", "run", "dev", "--", "--port", "5174", "--strictPort"],
+      "env": { "REVIEWS_API": "http://127.0.0.1:8787" },
+      "port": 5174
     }
   ]
 }

@@ -6,6 +6,7 @@ import { getThemeMode, setThemeMode, type ThemeMode } from '../telegram/theme';
 import { IconChat, IconClock, IconPhone, IconPin, IconStar, IconTelegram } from '../components/icons';
 import { callPhone, openMaxChat, openTelegramChat } from '../telegram/telegramWebApp';
 import { CONTACTS, WORK_HOURS, type ShopContact } from '../domain/shop';
+import { reviewPhotoUrl, useReviews } from '../api/reviewsRepo';
 import './ProfileScreen.css';
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
@@ -53,6 +54,7 @@ export default function ProfileScreen() {
           <p>iPhone, MacBook, iPad, Watch, AirPods. Если не нашли интересующий товар — обращайтесь в личном порядке 🙌</p>
           <p>Техника новая, оригинальная. Гарантию и её условия уточняйте у менеджера.</p>
         </div>
+        <ReviewsRow />
       </div>
 
       <p className="tg-section-title">Контакты</p>
@@ -87,6 +89,27 @@ export default function ProfileScreen() {
       <p className="profile-seller">{SELLER_LINE}</p>
       <p className="profile-version">Версия {__APP_VERSION__}</p>
     </div>
+  );
+}
+
+// «Отзывы покупателей ›» под «О магазине» (без числа — Роман, 29.10.2026) → экран отзывов. Нет отзывов или не загрузились — строки нет.
+function ReviewsRow() {
+  const data = useReviews();
+  if (!data || data.reviews.length === 0) return null;
+  const withPhotos = data.reviews.filter((r) => r.photos > 0).slice(0, 3);
+  return (
+    <Link to="/reviews" className="reviews-row">
+      {withPhotos.length > 0 && (
+        <span className="reviews-row__pics" aria-hidden="true">
+          {withPhotos.map((r) => <img key={r.id} src={reviewPhotoUrl(r.id, 0)} alt="" />)}
+        </span>
+      )}
+      <span className="reviews-row__text">
+        <b>Отзывы покупателей</b>
+        <span>из нашего канала в Telegram</span>
+      </span>
+      <svg className="reviews-row__chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+    </Link>
   );
 }
 
