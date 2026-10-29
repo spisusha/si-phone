@@ -1,0 +1,89 @@
+/* «Язычок» быстрой прокрутки: справа, поверх витрины, но под нижним меню и кнопкой действия */
+.fast-scroll {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.fast-scroll.is-shown {
+  opacity: 1;
+}
+
+.fast-scroll__thumb {
+  position: fixed;
+  right: 3px;
+  width: 24px;
+  height: 52px;
+  border-radius: 12px;
+  background: var(--color-surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  touch-action: none; /* тянем язычок — страница не листается пальцем и Telegram не сворачивается */
+  cursor: grab;
+}
+
+/* Зона касания шире самого язычка: удобнее попасть пальцем */
+.fast-scroll__thumb::before {
+  content: '';
+  position: absolute;
+  inset: -6px -3px -6px -16px;
+}
+
+.fast-scroll.is-shown .fast-scroll__thumb {
+  pointer-events: auto;
+}
+
+.fast-scroll__thumb.is-dragging {
+  cursor: grabbing;
+  background: var(--color-primary);
+}
+
+.fast-scroll__thumb i {
+  display: block;
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-muted);
+}
+
+.fast-scroll__thumb.is-dragging i {
+  background: var(--color-on-primary);
+}
+
+.fast-scroll__hint {
+  position: fixed;
+  right: 36px;
+  max-width: calc(100vw - 52px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fast-scroll__hint small {
+  display: block;
+  font-size: var(--fs-tiny);
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fast-scroll {
+    transition: none;
+  }
+}

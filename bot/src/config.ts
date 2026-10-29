@@ -9,7 +9,7 @@ export const MANAGER = { name: "Артём", username: "l_bobr_l" };
 export const MANAGER_URL = `https://t.me/${MANAGER.username}`;
 
 export const WELCOME_MESSAGE = `
-Привет! Это <b>Si Phone</b> — оригинальная техника Apple по сифанутым ценам 🤙
+Привет! Это <b>Si Phone</b> — оригинальная техника Apple по выгодным ценам 🤙
 
 iPhone, iPad, MacBook, Apple Watch, AirPods — новые, в заводской упаковке. Цены меняются ежедневно ‼️
 
@@ -164,4 +164,4 @@ export const BOT_DESCRIPTION =
   "Si Phone — оригинальная техника Apple: iPhone, iPad, MacBook, Apple Watch, AirPods. Новая, в заводской упаковке.\n\nКаталог с ценами, заказ в пару нажатий, ответы на частые вопросы и связь с менеджером. Нажмите «Старт» 👇";
 
 // Короткое описание — в профиле бота и в поиске (setMyShortDescription, до 120 символов)
-export const BOT_SHORT_DESCRIPTION = "Оригинальная техника Apple по сифанутым ценам 🤙 Каталог, заказ и связь с менеджером";
+export const BOT_SHORT_DESCRIPTION = "Оригинальная техника Apple по выгодным ценам 🤙 Каталог, заказ и связь с менеджером";
