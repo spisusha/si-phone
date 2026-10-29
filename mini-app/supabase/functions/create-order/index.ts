@@ -190,10 +190,20 @@ Deno.serve(withCors(async (req) => {
         gift = { id: g.id, prize: g.prize_key, title, code: g.code, discount: g.prize_key === 'discount' ? GIFT_DISCOUNT : 0 };
       }
     }
-    const total = subtotal - (gift?.discount ?? 0);
-
     /* ── 5. сохранить (с лимитом) и отправить админам ── */
     const orderId = crypto.randomUUID();
+
+    // Подарок забираем атомарно ДО записи заказа: «used_at is null» в одном UPDATE — из двух одновременных
+    // заказов подарок получит только один, второй посчитается без него. Заказ не принят — подарок возвращаем.
+    if (gift) {
+      const { data: took } = await sb.from('wheel_spins').update({ used_at: new Date().toISOString(), order_id: orderId })
+        .eq('id', gift.id).is('used_at', null).select('id');
+      if (!took?.length) gift = null;
+    }
+    const releaseGift = async () => {
+      if (gift) await sb.from('wheel_spins').update({ used_at: null, order_id: null }).eq('order_id', orderId);
+    };
+    const total = subtotal - (gift?.discount ?? 0);
     const contacts: Contacts = { deliveryMethod, paymentMethod, address, phone };
     // Только состав заказа — без имени, ника, телефона и адреса
     const payload = {
@@ -209,17 +219,12 @@ Deno.serve(withCors(async (req) => {
     });
     if (saveErr) {
       console.error('create-order: save failed', saveErr.message);
+      await releaseGift();
       return json({ ok: false, error: 'Не удалось оформить заказ. Попробуйте ещё раз или напишите менеджеру' }, 500);
     }
     if (!accepted) {
+      await releaseGift();
       return json({ ok: false, code: 'rate_limited', error: 'Слишком много заказов подряд. Напишите менеджеру или попробуйте позже' }, 429);
-    }
-
-    // Подарок отмечаем использованным только у принятого заказа (одновременный второй заказ его уже не получит)
-    if (gift) {
-      const { data: took } = await sb.from('wheel_spins').update({ used_at: new Date().toISOString(), order_id: orderId })
-        .eq('id', gift.id).is('used_at', null).select('id');
-      if (!took?.length) console.error('create-order: gift already used', gift.code);
     }
 
     const chatIds = (Deno.env.get('TELEGRAM_ADMIN_CHAT_IDS') || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -251,7 +256,7 @@ Deno.serve(withCors(async (req) => {
     if (tgSent === 0) {
       console.error('create-order: not delivered to Telegram', orderId);
       await sb.from('orders').delete().eq('id', orderId);
-      if (gift) await sb.from('wheel_spins').update({ used_at: null, order_id: null }).eq('order_id', orderId);
+      await releaseGift();
       return json({ ok: false, error: 'Не получилось передать заказ менеджеру. Попробуйте ещё раз или напишите менеджеру' }, 502);
     }
     return json({ ok: true, orderId, total, items: lines, ...(gift ? { gift: { title: gift.title, code: gift.code, discount: gift.discount } } : {}) });
