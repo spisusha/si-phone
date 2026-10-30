@@ -7,7 +7,9 @@ compatibility_date = "2024-01-01"
 
 # Публичные переменные (не секреты)
 [vars]
-MINI_APP_URL = "https://si-phone.ru/"
+# Временно pages.dev (30.10.2026): si-phone.ru у части покупателей не грузится (VPN пускает .ru напрямую, а напрямую режут Cloudflare).
+# ?v=2 — обходит старую переадресацию pages.dev → si-phone.ru, если Telegram её запомнил.
+MINI_APP_URL = "https://si-phone.pages.dev/?v=2"
 SUPABASE_URL = "https://zudohmttvlibpugravgb.supabase.co"
 # Отзывы: группа обсуждений канала «Sí phone» и пост «Ваши отзывы❗️» в ней. Бот должен быть админом группы.
 REVIEWS_GROUP_ID = "-1002273047590"
